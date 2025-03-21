@@ -1,19 +1,19 @@
 import { fetchNextMatch } from './api';
+import { formatMatchTitle, formatMatchThread } from './format';
+import { postMatchThread } from './reddit';
 
 async function main() {
   const match = await fetchNextMatch();
 
   if (!match) {
-    console.log("No match data available.");
+    console.log("No match found.");
     return;
   }
 
-  const { fixture, teams, league } = match;
+  const title = formatMatchTitle(match);
+  const body = formatMatchThread(match);
 
-  console.log(`🏟️ ${teams.home.name} vs ${teams.away.name}`);
-  console.log(`📅 Kickoff (UTC): ${fixture.date}`);
-  console.log(`🧭 Venue: ${fixture.venue?.name}, ${fixture.venue?.city}`);
-  console.log(`🏆 Competition: ${league.name} - ${league.round}`);
+  await postMatchThread(title, body);
 }
 
 main();

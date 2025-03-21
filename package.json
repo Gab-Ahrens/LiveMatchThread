@@ -2,10 +2,10 @@
   "name": "livematchthread",
   "version": "1.0.0",
   "main": "index.js",
-"scripts": {
-  "dev": "ts-node src/index.ts",
-  "build": "tsc"
-},
+  "scripts": {
+    "dev": "ts-node src/index.ts",
+    "build": "tsc"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -17,6 +17,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.13.11",
+    "@types/snoowrap": "^1.16.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.2"
   }
