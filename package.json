@@ -1,0 +1,23 @@
+{
+  "name": "livematchthread",
+  "version": "1.0.0",
+  "main": "index.js",
+"scripts": {
+  "dev": "ts-node src/index.ts",
+  "build": "tsc"
+},
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "axios": "^1.8.4",
+    "dotenv": "^16.4.7",
+    "snoowrap": "^1.15.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.11",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.2"
+  }
+}
