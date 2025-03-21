@@ -14,7 +14,7 @@ export function formatMatchThread(match: any): string {
   const threadTitle = `${home} vs ${away} - Match Thread`;
 
   const threadBody = `
-## 🏆 ${competition} - ${round}
+## 🏆 ${competition}
 
 **${home}** vs **${away}**
 
