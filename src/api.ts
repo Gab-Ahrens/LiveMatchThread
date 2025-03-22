@@ -12,6 +12,7 @@ const SEASON = 2024;
 
 export async function fetchNextMatch() {
   if (USE_MOCK) {
+    console.log('🧪 Using mock data for next match.');
     const filePath = path.join(__dirname, '..', 'mock-next-match.json');
     const content = fs.readFileSync(filePath, 'utf-8');
     return JSON.parse(content);
