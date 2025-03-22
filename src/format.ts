@@ -1,5 +1,8 @@
+// src/format.ts
+
 export function formatMatchThread(match: any): string {
-  const { fixture, teams, league, venue } = match;
+  const { fixture, teams, league } = match;
+  const { venue } = fixture; // ✅ FIXED: Venue is nested inside fixture
 
   const kickoff = new Date(fixture.date).toLocaleString('pt-BR', {
     timeZone: 'America/Sao_Paulo',
