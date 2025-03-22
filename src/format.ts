@@ -1,7 +1,11 @@
 export function formatMatchThread(match: any): string {
   const { fixture, teams, league, venue } = match;
 
-  const kickoff = new Date(fixture.date).toUTCString();
+  const kickoff = new Date(fixture.date).toLocaleString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    dateStyle: 'full',
+    timeStyle: 'short'
+  });
 
   const home = teams.home.name;
   const away = teams.away.name;
@@ -11,15 +15,13 @@ export function formatMatchThread(match: any): string {
   const stadium = venue?.name ?? "Unknown Venue";
   const city = venue?.city ?? "Unknown City";
 
-  const threadTitle = `${home} vs ${away} - Match Thread`;
-
   const threadBody = `
-## 🏆 ${competition}
+## 🏆 ${competition} - ${round}
 
 **${home}** vs **${away}**
 
 📍 *${stadium}, ${city}*  
-🕓 *Horário: ${kickoff} (UTC)*
+🕓 *Horário: ${kickoff} (Brasília)*
 
 ---
 
@@ -27,17 +29,17 @@ export function formatMatchThread(match: any): string {
 
 ---
 
-^(*Thead gerado automaticamente via bot.*)
+^(*Este tópico foi criado automaticamente por um bot.*)
 `;
 
   return threadBody.trim();
 }
 
 export function formatMatchTitle(match: any): string {
-  const { teams, league, fixture } = match;
+  const { teams, league } = match;
   const home = teams.home.name;
   const away = teams.away.name;
   const round = league.round;
 
-  return `${home} vs ${away} [${round}] - Match Thread`;
+  return `${home} vs ${away} [${round}] - Tópico da Partida`;
 }
