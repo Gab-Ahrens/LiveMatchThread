@@ -18,9 +18,9 @@ export async function fetchNextMatch() {
     return JSON.parse(content);
   }
 
-  try {
-    console.log('🌐 Making API call to fetch next SC Internacional match...');
+  console.log('🌐 [LIVE] Making API call to fetch next SC Internacional match...');
 
+  try {
     const response = await axios.get(`${API_BASE_URL}/fixtures`, {
       params: {
         team: TEAM_ID,
@@ -33,6 +33,8 @@ export async function fetchNextMatch() {
       }
     });
 
+    console.dir(response.data, { depth: null }); // 👈 show full response
+
     const data = response.data.response[0];
 
     if (!data) {
@@ -41,7 +43,6 @@ export async function fetchNextMatch() {
     }
 
     return data;
-
   } catch (error) {
     console.error('❌ Failed to fetch from API:', error);
     return null;

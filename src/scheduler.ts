@@ -7,8 +7,8 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const DRY_RUN = process.env.DRY_RUN;
-const USE_MOCK = process.env.USE_MOCK_DATA;
+const DRY_RUN = false;
+const USE_MOCK = false;
 
 let scheduledMatchId: number | null = null;
 let scheduledCronJob: cron.ScheduledTask | null = null;
