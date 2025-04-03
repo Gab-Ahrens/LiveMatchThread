@@ -1,4 +1,11 @@
-// src/format.ts
+function translateRound(round: string): string {
+  return round
+    .replace('Group Stage', 'Fase de Grupos')
+    .replace('Regular Season', 'Temporada Regular')
+    .replace('Quarter-finals', 'Quartas de Final')
+    .replace('Semi-finals', 'Semifinal')
+    .replace('Final', 'Final');
+}
 
 export function formatMatchThread(match: any): string {
   const { fixture, teams, league } = match;
@@ -14,7 +21,7 @@ export function formatMatchThread(match: any): string {
   const away = teams.away.name;
 
   const competition = league.name;
-  const round = league.round;
+  const round = translateRound(league.round);
   const stadium = venue?.name ?? "Unknown Venue";
   const city = venue?.city ?? "Unknown City";
 
@@ -32,7 +39,7 @@ export function formatMatchThread(match: any): string {
 
 ---
 
-^(*Este tópico foi criado automaticamente por um bot.*)
+^(*Esse thread foi criado automaticamente por um bot.*)
 `;
 
   return threadBody.trim();
@@ -42,7 +49,8 @@ export function formatMatchTitle(match: any): string {
   const { teams, league } = match;
   const home = teams.home.name;
   const away = teams.away.name;
-  const round = league.round;
+  const round = translateRound(league.round);
+  const competition = translateRound(league.name);
 
-  return `${home} vs ${away} [${round}] - Tópico da Partida`;
+  return `[Match Thread: ${home} vs ${away} [${competition} - ${round}]`;
 }
