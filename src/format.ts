@@ -1,5 +1,6 @@
 function translateRound(round: string): string {
   return round
+    .replace('Group Stage - ', 'Fase de Grupos - Grupo ')
     .replace('Group Stage', 'Fase de Grupos')
     .replace('Regular Season', 'Temporada Regular')
     .replace('Quarter-finals', 'Quartas de Final')
