@@ -29,7 +29,7 @@ async function scheduleNextMatchThread() {
   const matchDateUTC = DateTime.fromISO(match.fixture.date, { zone: 'utc' });
 
   // Convert to Brasília and subtract 15 mins
-  const postTimeBrasilia = matchDateUTC.setZone('America/Sao_Paulo').minus({ minutes: 15 });
+  const postTimeBrasilia = matchDateUTC.setZone('America/Sao_Paulo').minus({ minutes: 60 });
 
   // Convert back to UTC for scheduling
   const postTimeUTC = postTimeBrasilia.setZone('utc');
