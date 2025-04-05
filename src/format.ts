@@ -43,7 +43,13 @@ export function formatMatchThread(match: any): string {
 
   const competition = formatCompetition(league.name);
   const round = formatRound(league.round);
-  const stadium = venue?.name ?? "Unknown Venue";
+
+  // 🏟️ Stadium override for Beira-Rio
+  let stadium = venue?.name ?? "Unknown Venue";
+  if (stadium === "Estádio José Pinheiro Borda") {
+    stadium = "Estádio Beira-Rio";
+  }
+
   const city = venue?.city ?? "Unknown City";
 
   const threadBody = `
