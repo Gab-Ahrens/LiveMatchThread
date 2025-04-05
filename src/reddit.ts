@@ -20,7 +20,8 @@ export async function postMatchThread(title: string, body: string) {
     const options = {
       subredditName,
       title,
-      text: body
+      text: body,
+      suggested_sort: 'new'
     };
 
     if (DRY_RUN) {

@@ -1,8 +1,8 @@
-// src/scheduler.ts
 import cron from 'node-cron';
 import { fetchNextMatch } from './api';
 import { formatMatchThread, formatMatchTitle } from './format';
 import { postMatchThread } from './reddit';
+import { DateTime } from 'luxon';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -14,12 +14,7 @@ let scheduledMatchId: number | null = null;
 let scheduledCronJob: cron.ScheduledTask | null = null;
 
 async function scheduleNextMatchThread() {
-  const now = new Date().toLocaleString('pt-BR', {
-    timeZone: 'America/Sao_Paulo',
-    dateStyle: 'full',
-    timeStyle: 'medium'
-  });
-
+  const now = DateTime.now().setZone('America/Sao_Paulo').toFormat("cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm:ss");
   console.log(`\n📅 [${now}] Iniciando checagem agendada para a próxima partida...`);
   console.log(`🔍 Fetching next match data ${USE_MOCK ? '[Mock data 🧪]' : '[Live data ☁️]'}`);
 
@@ -31,15 +26,13 @@ async function scheduleNextMatchThread() {
   }
 
   const matchId = match.fixture.id;
-  const matchDate = new Date(match.fixture.date);
+  const matchDateUTC = DateTime.fromISO(match.fixture.date, { zone: 'utc' });
 
-  // Convert match time to America/Sao_Paulo timezone for accurate scheduling
-  const matchDateLocal = new Date(matchDate.toLocaleString('en-US', {
-    timeZone: 'America/Sao_Paulo'
-  }));
-  
-  // ⏱️ Schedule 15 minutes earlier
-  const postTime = new Date(matchDateLocal.getTime() - 15 * 60 * 1000);
+  // Convert to Brasília and subtract 15 mins
+  const postTimeBrasilia = matchDateUTC.setZone('America/Sao_Paulo').minus({ minutes: 15 });
+
+  // Convert back to UTC for scheduling
+  const postTimeUTC = postTimeBrasilia.setZone('utc');
 
   if (scheduledMatchId === matchId) {
     console.log('✅ Match already scheduled.');
@@ -51,13 +44,10 @@ async function scheduleNextMatchThread() {
     console.log('🔄 Rescheduled due to new match data.');
   }
 
-  // Convert back to UTC for cron scheduling
-  const postTimeUTC = new Date(postTime.toLocaleString('en-US', { timeZone: 'UTC' }));
-  
-  const minute = postTimeUTC.getMinutes();
-  const hour = postTimeUTC.getHours();
-  const day = postTimeUTC.getDate();
-  const month = postTimeUTC.getMonth() + 1;
+  const minute = postTimeUTC.minute;
+  const hour = postTimeUTC.hour;
+  const day = postTimeUTC.day;
+  const month = postTimeUTC.month;
 
   const cronTime = `${minute} ${hour} ${day} ${month} *`;
 
@@ -68,11 +58,7 @@ async function scheduleNextMatchThread() {
   console.log(`Title: ${title}`);
   console.log(`Body:\n${body}\n`);
 
-  console.log(`🕒 Thread will be created at: ${postTime.toLocaleString('pt-BR', {
-    timeZone: 'America/Sao_Paulo',
-    dateStyle: 'full',
-    timeStyle: 'medium'
-  })} ${DRY_RUN ? '[DRY RUN 🚧]' : '[LIVE MODE 🚀]'}`);
+  console.log(`🕒 Thread will be created at: ${postTimeBrasilia.toFormat("cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm:ss")} (Brasília) ${DRY_RUN ? '[DRY RUN 🚧]' : '[LIVE MODE 🚀]'}`);
 
   scheduledCronJob = cron.schedule(cronTime, async () => {
     if (DRY_RUN) {
