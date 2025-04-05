@@ -1,16 +1,36 @@
-function translateRound(round: string): string {
+function formatCompetition(name: string): string {
+  if (name.toLowerCase().includes('libertadores')) {
+    return 'LIBERTADORES';
+  }
+  if (name.toLowerCase().includes('serie a')) {
+    return 'BRASILEIRÃO SÉRIE A';
+  }
+  if (name.toLowerCase().includes('copa do brasil')) {
+    return 'COPA DO BRASIL';
+  }
+  return name.toUpperCase();
+}
+
+function formatRound(round: string): string {
+  // Group Stage
+  const groupMatch = round.match(/Group Stage - (\w)/i);
+  if (groupMatch) return `GRUPO ${groupMatch[1]}`;
+
+  // Regular Season - 2 → Rodada 2
+  const rodadaMatch = round.match(/(Regular Season|Temporada Regular)\s*-\s*(\d+)/i);
+  if (rodadaMatch) return `RODADA ${rodadaMatch[2]}`;
+
+  // Knockouts
   return round
-    .replace('Group Stage - ', 'Fase de Grupos - Grupo ')
-    .replace('Group Stage', 'Fase de Grupos')
-    .replace('Regular Season', 'Temporada Regular')
-    .replace('Quarter-finals', 'Quartas de Final')
-    .replace('Semi-finals', 'Semifinal')
-    .replace('Final', 'Final');
+    .replace('Quarter-finals', 'QUARTAS DE FINAL')
+    .replace('Semi-finals', 'SEMIFINAL')
+    .replace('Final', 'FINAL')
+    .toUpperCase();
 }
 
 export function formatMatchThread(match: any): string {
   const { fixture, teams, league } = match;
-  const { venue } = fixture; // ✅ FIXED: Venue is nested inside fixture
+  const { venue } = fixture;
 
   const kickoff = new Date(fixture.date).toLocaleString('pt-BR', {
     timeZone: 'America/Sao_Paulo',
@@ -21,8 +41,8 @@ export function formatMatchThread(match: any): string {
   const home = teams.home.name;
   const away = teams.away.name;
 
-  const competition = league.name;
-  const round = translateRound(league.round);
+  const competition = formatCompetition(league.name);
+  const round = formatRound(league.round);
   const stadium = venue?.name ?? "Unknown Venue";
   const city = venue?.city ?? "Unknown City";
 
@@ -48,10 +68,11 @@ export function formatMatchThread(match: any): string {
 
 export function formatMatchTitle(match: any): string {
   const { teams, league } = match;
-  const home = teams.home.name;
-  const away = teams.away.name;
-  const round = translateRound(league.round);
-  const competition = translateRound(league.name);
+  const home = teams.home.name.toUpperCase();
+  const away = teams.away.name.toUpperCase();
 
-  return `[Match Thread: ${home} vs ${away} [${competition} - ${round}]`;
+  const competition = formatCompetition(league.name);
+  const round = formatRound(league.round); // now gives "RODADA X" or "GRUPO F", etc.
+
+  return `[JOGO] | ${competition} | ${home} X ${away} | ${round}`;
 }
