@@ -36,12 +36,13 @@ async function scheduleNextMatchThread() {
   const matchId = match.fixture.id;
   const matchDateUTC = DateTime.fromISO(match.fixture.date, { zone: "utc" });
 
-  // ⚠️ NEW: Use Amsterdam time and subtract 30 minutes
-  const postTimeNetherlands = matchDateUTC
+  // 🕒 Scheduled for 30 minutes before match time (Amsterdam time)
+  const postTimeAmsterdam = matchDateUTC
     .setZone("Europe/Amsterdam")
     .minus({ minutes: 30 });
 
-  const postTimeUTC = postTimeNetherlands.setZone("utc");
+  // Convert to UTC for cron scheduling
+  const postTimeUTC = postTimeAmsterdam.setZone("utc");
 
   if (scheduledMatchId === matchId) {
     console.log("✅ Match already scheduled.");
@@ -61,6 +62,7 @@ async function scheduleNextMatchThread() {
   const cronTime = `${minute} ${hour} ${day} ${month} *`;
 
   const lineups = await fetchLineups(matchId);
+
   const title = formatMatchTitle(match);
   const body = formatMatchThread(match, lineups);
 
@@ -69,11 +71,12 @@ async function scheduleNextMatchThread() {
   console.log(`Body:\n${body}\n`);
 
   console.log(
-    `🕒 Thread will be created at: ${postTimeNetherlands.toFormat(
+    `🕒 Thread will be created at: ${postTimeAmsterdam.toFormat(
       "cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm:ss"
     )} (Amsterdam) ${DRY_RUN ? "[DRY RUN 🚧]" : "[LIVE MODE 🚀]"}`
   );
 
+  // ✅ Schedule and start the job
   scheduledCronJob = cron.schedule(cronTime, async () => {
     console.log("⏰ Scheduled match time reached, preparing thread...");
 
@@ -92,6 +95,8 @@ async function scheduleNextMatchThread() {
     scheduledMatchId = null;
     scheduledCronJob = null;
   });
+
+  scheduledCronJob.start(); // 🔑 This is what actually enables the job
 
   scheduledMatchId = matchId;
 }
