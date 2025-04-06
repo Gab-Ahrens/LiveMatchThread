@@ -7,6 +7,7 @@ import axios from "axios";
 dotenv.config();
 
 const DRY_RUN = process.env.DRY_RUN === "true";
+const USE_MOCK = process.env.USE_MOCK_DATA === "true";
 
 async function fetchMatchStatus(fixtureId: number): Promise<string> {
   const response = await axios.get(
@@ -45,14 +46,18 @@ function formatStats(finalData: any): string {
   if (!stats || stats.length < 2) return "_Estatísticas indisponíveis._";
 
   const [homeStats, awayStats] = stats;
-  const statLines = homeStats.statistics.map((stat: any, idx: number) => {
-    const label = stat.type;
-    const homeValue = stat.value;
-    const awayValue = awayStats.statistics[idx]?.value ?? "-";
-    return `${label}: ${homeValue} - ${awayValue}`;
-  });
+  const lines = [
+    `| Estatística | ${homeStats.team.name.toUpperCase()} | ${awayStats.team.name.toUpperCase()} |`,
+    "|-------------|------------------|------------------|",
+  ];
 
-  return statLines.join("\n");
+  for (let i = 0; i < homeStats.statistics.length; i++) {
+    const stat = homeStats.statistics[i];
+    const awayStat = awayStats.statistics[i];
+    lines.push(`| ${stat.type} | ${stat.value} | ${awayStat?.value ?? "-"} |`);
+  }
+
+  return lines.join("\n");
 }
 
 function formatOrdinalRound(round: string): string {
@@ -76,67 +81,17 @@ export async function startPostMatchScheduler() {
 
   const matchId = match.fixture.id;
 
-  if (DRY_RUN && process.env.USE_MOCK_DATA === "true") {
+  // 🧪 If mock + dry run, preview immediately
+  if (DRY_RUN && USE_MOCK) {
     console.log(
       "🧪 [MOCK] Previewing post-match thread immediately (no polling)."
     );
     const finalData = await fetchFinalMatchData(matchId);
-
-    const home = finalData.teams.home.name.toUpperCase();
-    const away = finalData.teams.away.name.toUpperCase();
-    const score = finalData.score.fulltime;
-    const venue = finalData.fixture.venue;
-    const kickoff = DateTime.fromISO(finalData.fixture.date, {
-      zone: "America/Sao_Paulo",
-    })
-      .setLocale("pt-BR")
-      .toFormat("cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm");
-    const competition =
-      finalData.league?.name?.toUpperCase().replace("SÉRIE A", "BRASILEIRÃO") ??
-      "COMPETIÇÃO";
-    const round = formatOrdinalRound(finalData.league?.round || "");
-
-    let scoreLine = `${home} ${score.home} x ${score.away} ${away}`;
-    const matchStatus = finalData.fixture?.status?.short || "FT";
-    if (matchStatus === "AET") scoreLine += " (após prorrogação)";
-    if (matchStatus === "PEN") {
-      const pen = finalData.score.penalty;
-      scoreLine += ` (pênaltis: ${pen.home} x ${pen.away})`;
-    }
-
-    const title = `[PÓS-JOGO] | ${competition} | ${scoreLine} | ${round}`;
-    const body = `
-## 📊 Resultado Final
-
-**${scoreLine}**
-
-📍 *${venue.name}, ${venue.city}*  
-🕓 *Data: ${kickoff} (Brasília)*
-
----
-
-### ⚽ Gols
-${formatGoals(finalData)}
-
----
-
-### 📈 Estatísticas
-${formatStats(finalData)}
-
----
-
-⚽️ Vamo Inter! ❤️
-
----
-^(*Esse post foi criado automaticamente por um bot.*)
-    `.trim();
-
-    console.log("🖥️ [PREVIEW] Post-Match Thread:");
-    console.log(`Title: ${title}`);
-    console.log(`Body:\n${body}`);
+    await renderAndPrintPostMatch(finalData);
     return;
   }
 
+  // 🕒 Wait 2 hours after match start
   const matchStartUTC = DateTime.fromISO(match.fixture.date, { zone: "utc" });
   const startPollingAt = matchStartUTC.plus({ hours: 2 });
   const now = DateTime.utc();
@@ -151,38 +106,45 @@ ${formatStats(finalData)}
   }
 
   console.log("⏳ Starting post-match status polling...");
+
   const interval = setInterval(async () => {
     const status = await fetchMatchStatus(matchId);
     console.log(`📡 Match status: ${status}`);
 
-    if (status === "FT" || status === "AET" || status === "PEN") {
+    if (["FT", "AET", "PEN"].includes(status)) {
       clearInterval(interval);
       const finalData = await fetchFinalMatchData(matchId);
+      await renderAndPrintPostMatch(finalData);
+    }
+  }, 2 * 60 * 1000);
+}
 
-      const home = finalData.teams.home.name.toUpperCase();
-      const away = finalData.teams.away.name.toUpperCase();
-      const score = finalData.score.fulltime;
-      const venue = finalData.fixture.venue;
-      const kickoff = DateTime.fromISO(finalData.fixture.date, {
-        zone: "America/Sao_Paulo",
-      }).toFormat("cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm");
-      const competition =
-        finalData.league?.name
-          ?.toUpperCase()
-          .replace("SÉRIE A", "BRASILEIRÃO") ?? "COMPETIÇÃO";
-      const round = formatOrdinalRound(finalData.league?.round || "");
+async function renderAndPrintPostMatch(finalData: any) {
+  const home = finalData.teams.home.name.toUpperCase();
+  const away = finalData.teams.away.name.toUpperCase();
+  const score = finalData.score.fulltime;
+  const venue = finalData.fixture.venue;
+  const kickoff = DateTime.fromISO(finalData.fixture.date, {
+    zone: "America/Sao_Paulo",
+  })
+    .setLocale("pt-BR")
+    .toFormat("cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm");
 
-      let scoreLine = `${home} ${score.home} x ${score.away} ${away}`;
-      if (status === "AET") scoreLine += " (após prorrogação)";
-      if (status === "PEN") {
-        const pen = finalData.score.penalty;
-        scoreLine += ` (pênaltis: ${pen.home} x ${pen.away})`;
-      }
+  const competition =
+    finalData.league?.name?.toUpperCase().replace("SÉRIE A", "BRASILEIRÃO") ??
+    "COMPETIÇÃO";
+  const round = formatOrdinalRound(finalData.league?.round || "");
 
-      const ordinalRound = formatOrdinalRound;
+  let scoreLine = `${home} ${score.home} x ${score.away} ${away}`;
+  const status = finalData.fixture.status?.short || "FT";
+  if (status === "AET") scoreLine += " (após prorrogação)";
+  if (status === "PEN") {
+    const pen = finalData.score.penalty;
+    scoreLine += ` (pênaltis: ${pen.home} x ${pen.away})`;
+  }
 
-      const title = `[PÓS-JOGO] | ${competition} | ${home.toUpperCase()} X ${away.toUpperCase()} | ${ordinalRound}`;
-      const body = `
+  const title = `[PÓS-JOGO] | ${competition} | ${home} X ${away} | ${round}`;
+  const body = `
 ## 📊 Resultado Final
 
 **${scoreLine}**
@@ -206,16 +168,14 @@ ${formatStats(finalData)}
 
 ---
 ^(*Esse post foi criado automaticamente por um bot.*)
-      `.trim();
+  `.trim();
 
-      if (DRY_RUN) {
-        console.log("🚧 [DRY RUN] Would post post-match thread:\n");
-        console.log(`Title: ${title}`);
-        console.log(`Body:\n${body}`);
-      } else {
-        console.log("🚀 Posting post-match thread!");
-        await postMatchThread(title, body);
-      }
-    }
-  }, 2 * 60 * 1000);
+  if (DRY_RUN) {
+    console.log("🚧 [DRY RUN] Would post post-match thread:\n");
+    console.log(`Title: ${title}`);
+    console.log(`Body:\n${body}`);
+  } else {
+    console.log("🚀 Posting post-match thread!");
+    await postMatchThread(title, body);
+  }
 }
