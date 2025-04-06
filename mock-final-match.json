@@ -1,0 +1,55 @@
+{
+  "fixture": {
+    "date": "2025-04-06T21:30:00+00:00",
+    "venue": {
+      "name": "Estádio José Pinheiro Borda",
+      "city": "Porto Alegre, RS"
+    }
+  },
+  "teams": {
+    "home": { "name": "Internacional" },
+    "away": { "name": "Cruzeiro" }
+  },
+  "score": {
+    "fulltime": { "home": 2, "away": 1 },
+    "penalty": { "home": null, "away": null }
+  },
+  "events": [
+    {
+      "time": { "elapsed": 12 },
+      "team": { "name": "Internacional" },
+      "player": { "name": "Alan Patrick" },
+      "type": "Goal"
+    },
+    {
+      "time": { "elapsed": 45 },
+      "team": { "name": "Cruzeiro" },
+      "player": { "name": "Bruno Rodrigues" },
+      "type": "Goal"
+    },
+    {
+      "time": { "elapsed": 88 },
+      "team": { "name": "Internacional" },
+      "player": { "name": "Wanderson" },
+      "type": "Goal"
+    }
+  ],
+  "statistics": [
+    {
+      "team": { "name": "Internacional" },
+      "statistics": [
+        { "type": "Posse de Bola", "value": "54%" },
+        { "type": "Finalizações", "value": 12 },
+        { "type": "Faltas", "value": 10 }
+      ]
+    },
+    {
+      "team": { "name": "Cruzeiro" },
+      "statistics": [
+        { "type": "Posse de Bola", "value": "46%" },
+        { "type": "Finalizações", "value": 8 },
+        { "type": "Faltas", "value": 15 }
+      ]
+    }
+  ]
+}
