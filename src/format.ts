@@ -29,7 +29,7 @@ function formatRound(round: string): string {
 }
 
 function formatLineups(lineups: any[]): string {
-  if (!lineups || lineups.length === 0) return '_Escalações indisponíveis._';
+  if (!lineups || lineups.length === 0) return 'Escalações indisponíveis no momento.';
 
   return lineups.map(team => {
     const coach = team.coach?.name || 'Desconhecido';
@@ -39,8 +39,8 @@ function formatLineups(lineups: any[]): string {
     return `
 **${team.team.name}**
 👔 Técnico: ${coach}  
-🟢 Titulares: ${starters}  
-🟡 Banco: ${subs}
+🔴 Titulares: ${starters}  
+⚪ Banco: ${subs}
 `;
   }).join('\n\n');
 }
@@ -68,7 +68,7 @@ export function formatMatchThread(match: any, lineups?: any): string {
   const city = venue?.city ?? "Unknown City";
   const referee = fixture.referee || 'Desconhecido';
 
-  const lineupSection = lineups ? formatLineups(lineups) : 'Escalações indisponíveis';
+  const lineupSection = lineups ? formatLineups(lineups) : 'Escalações indisponíveis no momento.';
 
   const threadBody = `
 ## 🏆 ${competition} - ${round}

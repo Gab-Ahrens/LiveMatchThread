@@ -50,9 +50,16 @@ export async function fetchNextMatch() {
 }
 
 export async function fetchLineups(fixtureId: number) {
+  if (USE_MOCK) {
+    console.log('🧪 Using mock data for lineups.');
+    const filePath = path.join(__dirname, '..', 'mock-lineups.json');
+    const content = fs.readFileSync(filePath, 'utf-8');
+    return JSON.parse(content);
+  }
+
   console.log(`📡 Fetching lineups for fixture ID ${fixtureId}...`);
   
-  const response = await axios.get('https://api-football-v1.p.rapidapi.com/v3/fixtures/lineups', {
+  const response = await axios.get(`${API_BASE_URL}/fixtures/lineups`, {
     params: { fixture: fixtureId },
     headers: {
       'x-rapidapi-key': process.env.RAPIDAPI_KEY!,
@@ -60,5 +67,5 @@ export async function fetchLineups(fixtureId: number) {
     },
   });
 
-  return response.data.response; // Array: [homeTeam, awayTeam]
+  return response.data.response;
 }

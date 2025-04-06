@@ -1,0 +1,54 @@
+[
+  {
+    "team": { "id": 119, "name": "Internacional" },
+    "coach": { "id": 1234, "name": "Eduardo Coudet" },
+    "startXI": [
+      { "player": { "id": 1, "name": "Goleiro" } },
+      { "player": { "id": 2, "name": "Lateral direito" } },
+      { "player": { "id": 2, "name": "Zagueiro Um" } },
+      { "player": { "id": 2, "name": "Zagueiro Dois" } },
+      { "player": { "id": 2, "name": "Lateral esquerdo" } },
+      { "player": { "id": 2, "name": "Volante" } },
+      { "player": { "id": 2, "name": "Volante" } },
+      { "player": { "id": 2, "name": "Meia" } },
+      { "player": { "id": 2, "name": "Ponta Direita" } },
+      { "player": { "id": 2, "name": "Ponta Esquerda" } },
+      { "player": { "id": 3, "name": "Atacante" } }
+    ],
+    "substitutes": [
+      { "player": { "id": 4, "name": "Reserva Um" } },
+      { "player": { "id": 5, "name": "Reserva Dois" } },
+      { "player": { "id": 4, "name": "Reserva Três" } },
+      { "player": { "id": 5, "name": "Reserva Quatro" } },
+      { "player": { "id": 4, "name": "Reserva Cinco" } },
+      { "player": { "id": 5, "name": "Reserva Seis" } },
+      { "player": { "id": 5, "name": "Reserva Sete" } }
+    ]
+  },
+  {
+    "team": { "id": 135, "name": "Cruzeiro" },
+    "coach": { "id": 5678, "name": "Pepa" },
+     "startXI": [
+      { "player": { "id": 1, "name": "Goleiro" } },
+      { "player": { "id": 2, "name": "Lateral direito" } },
+      { "player": { "id": 2, "name": "Zagueiro Um" } },
+      { "player": { "id": 2, "name": "Zagueiro Dois" } },
+      { "player": { "id": 2, "name": "Lateral esquerdo" } },
+      { "player": { "id": 2, "name": "Volante" } },
+      { "player": { "id": 2, "name": "Volante" } },
+      { "player": { "id": 2, "name": "Meia" } },
+      { "player": { "id": 2, "name": "Ponta Direita" } },
+      { "player": { "id": 2, "name": "Ponta Esquerda" } },
+      { "player": { "id": 3, "name": "Atacante" } }
+    ],
+    "substitutes": [
+      { "player": { "id": 4, "name": "Reserva Um" } },
+      { "player": { "id": 5, "name": "Reserva Dois" } },
+      { "player": { "id": 4, "name": "Reserva Três" } },
+      { "player": { "id": 5, "name": "Reserva Quatro" } },
+      { "player": { "id": 4, "name": "Reserva Cinco" } },
+      { "player": { "id": 5, "name": "Reserva Seis" } },
+      { "player": { "id": 5, "name": "Reserva Sete" } }
+    ]
+  }
+]

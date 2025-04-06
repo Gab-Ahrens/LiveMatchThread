@@ -51,8 +51,10 @@ async function scheduleNextMatchThread() {
 
   const cronTime = `${minute} ${hour} ${day} ${month} *`;
 
-  const title = formatMatchTitle(match);
-  const body = formatMatchThread(match);
+const lineups = await fetchLineups(matchId);
+
+const title = formatMatchTitle(match);
+const body = formatMatchThread(match, lineups); 
 
   console.log(`\n🖥️ [PREVIEW] Match Thread Preview:`);
   console.log(`Title: ${title}`);
@@ -62,8 +64,6 @@ async function scheduleNextMatchThread() {
 
   scheduledCronJob = cron.schedule(cronTime, async () => {
   console.log('⏰ Scheduled match time reached, preparing thread...');
-
-  const lineups = await fetchLineups(matchId); // ✅ Fetch before formatting
 
   const title = formatMatchTitle(match);
   const body = formatMatchThread(match, lineups); // ✅ Pass to thread formatter
