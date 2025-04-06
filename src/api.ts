@@ -22,27 +22,14 @@ export async function fetchNextMatch() {
 
   try {
     const response = await axios.get(`${API_BASE_URL}/fixtures`, {
-      params: {
-        team: TEAM_ID,
-        season: SEASON,
-        next: 1
-      },
+      params: { team: TEAM_ID, season: SEASON, next: 1 },
       headers: {
         'x-rapidapi-key': process.env.RAPIDAPI_KEY!,
         'x-rapidapi-host': 'api-football-v1.p.rapidapi.com'
       }
     });
 
-    console.dir(response.data, { depth: null }); // 👈 show full response
-
-    const data = response.data.response[0];
-
-    if (!data) {
-      console.log('⚠️ No upcoming match returned from API.');
-      return null;
-    }
-
-    return data;
+    return response.data.response[0] || null;
   } catch (error) {
     console.error('❌ Failed to fetch from API:', error);
     return null;
@@ -57,15 +44,34 @@ export async function fetchLineups(fixtureId: number) {
     return JSON.parse(content);
   }
 
-  console.log(`📡 Fetching lineups for fixture ID ${fixtureId}...`);
-  
   const response = await axios.get(`${API_BASE_URL}/fixtures/lineups`, {
     params: { fixture: fixtureId },
     headers: {
       'x-rapidapi-key': process.env.RAPIDAPI_KEY!,
-      'x-rapidapi-host': 'api-football-v1.p.rapidapi.com',
-    },
+      'x-rapidapi-host': 'api-football-v1.p.rapidapi.com'
+    }
   });
-
   return response.data.response;
+}
+
+export async function fetchMatchStatus(fixtureId: number) {
+  const response = await axios.get(`${API_BASE_URL}/fixtures`, {
+    params: { id: fixtureId },
+    headers: {
+      'x-rapidapi-key': process.env.RAPIDAPI_KEY!,
+      'x-rapidapi-host': 'api-football-v1.p.rapidapi.com'
+    }
+  });
+  return response.data.response[0]?.fixture?.status?.short;
+}
+
+export async function fetchFinalMatchData(fixtureId: number) {
+  const response = await axios.get(`${API_BASE_URL}/fixtures`, {
+    params: { id: fixtureId },
+    headers: {
+      'x-rapidapi-key': process.env.RAPIDAPI_KEY!,
+      'x-rapidapi-host': 'api-football-v1.p.rapidapi.com'
+    }
+  });
+  return response.data.response[0];
 }
