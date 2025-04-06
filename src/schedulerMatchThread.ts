@@ -1,4 +1,3 @@
-import cron from "node-cron";
 import { fetchNextMatch, fetchLineups } from "./api";
 import { formatMatchThread, formatMatchTitle } from "./format";
 import { postMatchThread } from "./reddit";
@@ -11,12 +10,12 @@ const DRY_RUN = process.env.DRY_RUN === "true";
 const USE_MOCK = process.env.USE_MOCK_DATA === "true";
 
 let scheduledMatchId: number | null = null;
-let scheduledCronJob: cron.ScheduledTask | null = null;
 
-async function scheduleNextMatchThread() {
+export async function startScheduler() {
   const now = DateTime.now()
     .setZone("Europe/Amsterdam")
     .toFormat("cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm:ss");
+
   console.log(
     `\n📅 [${now}] Iniciando checagem agendada para a próxima partida...`
   );
@@ -36,33 +35,15 @@ async function scheduleNextMatchThread() {
   const matchId = match.fixture.id;
   const matchDateUTC = DateTime.fromISO(match.fixture.date, { zone: "utc" });
 
-  // 🕒 Scheduled for 30 minutes before match time (Amsterdam time)
+  // Schedule to post 15 minutes before the match (Amsterdam time)
   const postTimeAmsterdam = matchDateUTC
     .setZone("Europe/Amsterdam")
-    .minus({ minutes: 30 });
-
-  // Convert to UTC for cron scheduling
+    .minus({ minutes: 8 });
   const postTimeUTC = postTimeAmsterdam.setZone("utc");
 
-  if (scheduledMatchId === matchId) {
-    console.log("✅ Match already scheduled.");
-    return;
-  }
-
-  if (scheduledCronJob) {
-    scheduledCronJob.stop();
-    console.log("🔄 Rescheduled due to new match data.");
-  }
-
-  const minute = postTimeUTC.minute;
-  const hour = postTimeUTC.hour;
-  const day = postTimeUTC.day;
-  const month = postTimeUTC.month;
-
-  const cronTime = `${minute} ${hour} ${day} ${month} *`;
+  const delay = postTimeUTC.diff(DateTime.utc(), "milliseconds").milliseconds;
 
   const lineups = await fetchLineups(matchId);
-
   const title = formatMatchTitle(match);
   const body = formatMatchThread(match, lineups);
 
@@ -76,15 +57,36 @@ async function scheduleNextMatchThread() {
     )} (Amsterdam) ${DRY_RUN ? "[DRY RUN 🚧]" : "[LIVE MODE 🚀]"}`
   );
 
-  // ✅ Schedule and start the job
-  scheduledCronJob = cron.schedule(cronTime, async () => {
+  if (scheduledMatchId === matchId) {
+    console.log("✅ Match already scheduled.");
+    return;
+  }
+
+  if (delay <= 0) {
+    console.warn(
+      "⚠️ Scheduled time is in the past. Posting thread immediately..."
+    );
+    if (DRY_RUN) {
+      console.log("🚧 [DRY RUN] Simulating post.");
+      console.log(`Title: ${title}`);
+      console.log(`Body:\n${body}`);
+    } else {
+      console.log("🚀 Posting match thread!");
+      await postMatchThread(title, body);
+    }
+    return;
+  }
+
+  console.log(`⏳ Waiting ${Math.round(delay / 1000)} seconds until post...`);
+
+  setTimeout(async () => {
     console.log("⏰ Scheduled match time reached, preparing thread...");
 
     const title = formatMatchTitle(match);
     const body = formatMatchThread(match, lineups);
 
     if (DRY_RUN) {
-      console.log("🚧 [DRY RUN] Simulating post at scheduled time.");
+      console.log("🚧 [DRY RUN] Simulating post.");
       console.log(`Title: ${title}`);
       console.log(`Body:\n${body}`);
     } else {
@@ -93,16 +95,7 @@ async function scheduleNextMatchThread() {
     }
 
     scheduledMatchId = null;
-    scheduledCronJob = null;
-  });
-
-  scheduledCronJob.start(); // 🔑 This is what actually enables the job
+  }, delay);
 
   scheduledMatchId = matchId;
-}
-
-export function startScheduler() {
-  console.log("📅 Scheduler started (checks every 6 hours).");
-  scheduleNextMatchThread();
-  cron.schedule("0 */6 * * *", scheduleNextMatchThread);
 }
