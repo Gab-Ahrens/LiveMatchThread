@@ -28,7 +28,24 @@ function formatRound(round: string): string {
     .toUpperCase();
 }
 
-export function formatMatchThread(match: any): string {
+function formatLineups(lineups: any[]): string {
+  if (!lineups || lineups.length === 0) return '_Escalações indisponíveis._';
+
+  return lineups.map(team => {
+    const coach = team.coach?.name || 'Desconhecido';
+    const starters = team.startXI?.map((p: { player: { name: any; }; }) => p.player.name).join(', ') || 'N/A';
+    const subs = team.substitutes?.map((p: { player: { name: any; }; }) => p.player.name).join(', ') || 'N/A';
+
+    return `
+**${team.team.name}**
+👔 Técnico: ${coach}  
+🟢 Titulares: ${starters}  
+🟡 Banco: ${subs}
+`;
+  }).join('\n\n');
+}
+
+export function formatMatchThread(match: any, lineups?: any): string {
   const { fixture, teams, league } = match;
   const { venue } = fixture;
 
@@ -44,13 +61,14 @@ export function formatMatchThread(match: any): string {
   const competition = formatCompetition(league.name);
   const round = formatRound(league.round);
 
-  // 🏟️ Stadium override for Beira-Rio
   let stadium = venue?.name ?? "Unknown Venue";
   if (stadium === "Estádio José Pinheiro Borda") {
     stadium = "Estádio Beira-Rio";
   }
-
   const city = venue?.city ?? "Unknown City";
+  const referee = fixture.referee || 'Desconhecido';
+
+  const lineupSection = lineups ? formatLineups(lineups) : 'Escalações indisponíveis';
 
   const threadBody = `
 ## 🏆 ${competition} - ${round}
@@ -58,7 +76,14 @@ export function formatMatchThread(match: any): string {
 **${home}** vs **${away}**
 
 📍 *${stadium}, ${city}*  
-🕓 *Horário: ${kickoff} (Brasília)*
+🕓 *Horário: ${kickoff} (Brasília)*  
+🧑‍⚖️ Árbitro: ${referee}
+
+---
+
+👥 **Escalações**
+
+${lineupSection}
 
 ---
 
@@ -78,7 +103,7 @@ export function formatMatchTitle(match: any): string {
   const away = teams.away.name.toUpperCase();
 
   const competition = formatCompetition(league.name);
-  const round = formatRound(league.round); // now gives "RODADA X" or "GRUPO F", etc.
+  const round = formatRound(league.round);
 
   return `[JOGO] | ${competition} | ${home} X ${away} | ${round}`;
 }

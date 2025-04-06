@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import { fetchNextMatch } from './api';
+import { fetchNextMatch, fetchLineups } from './api';
 import { formatMatchThread, formatMatchTitle } from './format';
 import { postMatchThread } from './reddit';
 import { DateTime } from 'luxon';
@@ -61,18 +61,25 @@ async function scheduleNextMatchThread() {
   console.log(`🕒 Thread will be created at: ${postTimeBrasilia.toFormat("cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm:ss")} (Brasília) ${DRY_RUN ? '[DRY RUN 🚧]' : '[LIVE MODE 🚀]'}`);
 
   scheduledCronJob = cron.schedule(cronTime, async () => {
-    if (DRY_RUN) {
-      console.log('🚧 [DRY RUN] Simulating post at scheduled time.');
-      console.log(`Title: ${title}`);
-      console.log(`Body:\n${body}`);
-    } else {
-      console.log('🚀 Posting match thread!');
-      await postMatchThread(title, body);
-    }
+  console.log('⏰ Scheduled match time reached, preparing thread...');
 
-    scheduledMatchId = null;
-    scheduledCronJob = null;
-  });
+  const lineups = await fetchLineups(matchId); // ✅ Fetch before formatting
+
+  const title = formatMatchTitle(match);
+  const body = formatMatchThread(match, lineups); // ✅ Pass to thread formatter
+
+  if (DRY_RUN) {
+    console.log('🚧 [DRY RUN] Simulating post at scheduled time.');
+    console.log(`Title: ${title}`);
+    console.log(`Body:\n${body}`);
+  } else {
+    console.log('🚀 Posting match thread!');
+    await postMatchThread(title, body);
+  }
+
+  scheduledMatchId = null;
+  scheduledCronJob = null;
+});
 
   scheduledMatchId = matchId;
 }

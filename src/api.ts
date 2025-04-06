@@ -48,3 +48,17 @@ export async function fetchNextMatch() {
     return null;
   }
 }
+
+export async function fetchLineups(fixtureId: number) {
+  console.log(`📡 Fetching lineups for fixture ID ${fixtureId}...`);
+  
+  const response = await axios.get('https://api-football-v1.p.rapidapi.com/v3/fixtures/lineups', {
+    params: { fixture: fixtureId },
+    headers: {
+      'x-rapidapi-key': process.env.RAPIDAPI_KEY!,
+      'x-rapidapi-host': 'api-football-v1.p.rapidapi.com',
+    },
+  });
+
+  return response.data.response; // Array: [homeTeam, awayTeam]
+}
