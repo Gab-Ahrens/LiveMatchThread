@@ -63,14 +63,64 @@ export async function startPostMatchScheduler() {
   }
 
   const matchId = match.fixture.id;
+
+  if (DRY_RUN && process.env.USE_MOCK_DATA === "true") {
+    console.log(`🧪 [MOCK] Previewing post-match thread immediately (no polling).`);
+    const finalData = await fetchFinalMatchData(matchId);
+
+    const home = finalData.teams.home.name;
+    const away = finalData.teams.away.name;
+    const score = finalData.score.fulltime;
+    const venue = finalData.fixture.venue;
+    const kickoff = DateTime.fromISO(finalData.fixture.date, { zone: "America/Sao_Paulo" }).toFormat("cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm");
+
+    let scoreLine = `${home} ${score.home} x ${score.away} ${away}`;
+    const matchStatus = finalData.fixture?.status?.short || "FT";
+    if (matchStatus === "AET") scoreLine += " (após prorrogação)";
+    if (matchStatus === "PEN") {
+      const pen = finalData.score.penalty;
+      scoreLine += ` (pênaltis: ${pen.home} x ${pen.away})`;
+    }
+
+    const title = `[PÓS-JOGO] ${scoreLine}`;
+    const body = `
+## 📊 Resultado Final
+
+**${scoreLine}**
+
+📍 *${venue.name}, ${venue.city}*  
+🕓 *Data: ${kickoff} (Brasília)*
+
+---
+
+### ⚽ Gols
+${formatGoals(finalData)}
+
+---
+
+### 📈 Estatísticas
+${formatStats(finalData)}
+
+---
+
+⚽️ Vamo Inter! ❤️
+
+---
+^(*Esse post foi criado automaticamente por um bot.*)
+    `.trim();
+
+    console.log("🖥️ [PREVIEW] Post-Match Thread:");
+    console.log(`Title: ${title}`);
+    console.log(`Body:\n${body}`);
+    return;
+  }
+
   const matchStartUTC = DateTime.fromISO(match.fixture.date, { zone: "utc" });
   const startPollingAt = matchStartUTC.plus({ hours: 2 });
   const now = DateTime.utc();
   const waitTimeMs = startPollingAt.diff(now).as("milliseconds");
 
-  console.log(
-    `🕓 Post-match thread scheduler will start polling at: ${startPollingAt.toISO()} (UTC)`
-  );
+  console.log(`🕓 Post-match thread scheduler will start polling at: ${startPollingAt.toISO()} (UTC)`);
 
   if (waitTimeMs > 0) {
     await new Promise((resolve) => setTimeout(resolve, waitTimeMs));
@@ -89,9 +139,7 @@ export async function startPostMatchScheduler() {
       const away = finalData.teams.away.name;
       const score = finalData.score.fulltime;
       const venue = finalData.fixture.venue;
-      const kickoff = DateTime.fromISO(finalData.fixture.date, {
-        zone: "America/Sao_Paulo",
-      }).toFormat("cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm");
+      const kickoff = DateTime.fromISO(finalData.fixture.date, { zone: "America/Sao_Paulo" }).toFormat("cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm");
 
       let scoreLine = `${home} ${score.home} x ${score.away} ${away}`;
       if (status === "AET") scoreLine += " (após prorrogação)";
@@ -101,7 +149,6 @@ export async function startPostMatchScheduler() {
       }
 
       const title = `[PÓS-JOGO] ${scoreLine}`;
-
       const body = `
 ## 📊 Resultado Final
 
