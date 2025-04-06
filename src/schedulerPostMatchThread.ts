@@ -55,6 +55,18 @@ function formatStats(finalData: any): string {
   return statLines.join("\n");
 }
 
+function formatOrdinalRound(round: string): string {
+  const rodadaMatch = round.match(
+    /(Regular Season|Temporada Regular)\s*-\s*(\d+)/i
+  );
+  if (rodadaMatch) return `${rodadaMatch[2]}ª RODADA`;
+
+  const groupMatch = round.match(/Group Stage - (\w)/i);
+  if (groupMatch) return `GRUPO ${groupMatch[1]}`;
+
+  return round.toUpperCase();
+}
+
 export async function startPostMatchScheduler() {
   const match = await fetchNextMatch();
   if (!match) {
@@ -65,14 +77,24 @@ export async function startPostMatchScheduler() {
   const matchId = match.fixture.id;
 
   if (DRY_RUN && process.env.USE_MOCK_DATA === "true") {
-    console.log(`🧪 [MOCK] Previewing post-match thread immediately (no polling).`);
+    console.log(
+      "🧪 [MOCK] Previewing post-match thread immediately (no polling)."
+    );
     const finalData = await fetchFinalMatchData(matchId);
 
-    const home = finalData.teams.home.name;
-    const away = finalData.teams.away.name;
+    const home = finalData.teams.home.name.toUpperCase();
+    const away = finalData.teams.away.name.toUpperCase();
     const score = finalData.score.fulltime;
     const venue = finalData.fixture.venue;
-    const kickoff = DateTime.fromISO(finalData.fixture.date, { zone: "America/Sao_Paulo" }).toFormat("cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm");
+    const kickoff = DateTime.fromISO(finalData.fixture.date, {
+      zone: "America/Sao_Paulo",
+    })
+      .setLocale("pt-BR")
+      .toFormat("cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm");
+    const competition =
+      finalData.league?.name?.toUpperCase().replace("SÉRIE A", "BRASILEIRÃO") ??
+      "COMPETIÇÃO";
+    const round = formatOrdinalRound(finalData.league?.round || "");
 
     let scoreLine = `${home} ${score.home} x ${score.away} ${away}`;
     const matchStatus = finalData.fixture?.status?.short || "FT";
@@ -82,7 +104,7 @@ export async function startPostMatchScheduler() {
       scoreLine += ` (pênaltis: ${pen.home} x ${pen.away})`;
     }
 
-    const title = `[PÓS-JOGO] ${scoreLine}`;
+    const title = `[PÓS-JOGO] | ${competition} | ${scoreLine} | ${round}`;
     const body = `
 ## 📊 Resultado Final
 
@@ -120,7 +142,9 @@ ${formatStats(finalData)}
   const now = DateTime.utc();
   const waitTimeMs = startPollingAt.diff(now).as("milliseconds");
 
-  console.log(`🕓 Post-match thread scheduler will start polling at: ${startPollingAt.toISO()} (UTC)`);
+  console.log(
+    `🕓 Post-match thread scheduler will start polling at: ${startPollingAt.toISO()} (UTC)`
+  );
 
   if (waitTimeMs > 0) {
     await new Promise((resolve) => setTimeout(resolve, waitTimeMs));
@@ -135,11 +159,18 @@ ${formatStats(finalData)}
       clearInterval(interval);
       const finalData = await fetchFinalMatchData(matchId);
 
-      const home = finalData.teams.home.name;
-      const away = finalData.teams.away.name;
+      const home = finalData.teams.home.name.toUpperCase();
+      const away = finalData.teams.away.name.toUpperCase();
       const score = finalData.score.fulltime;
       const venue = finalData.fixture.venue;
-      const kickoff = DateTime.fromISO(finalData.fixture.date, { zone: "America/Sao_Paulo" }).toFormat("cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm");
+      const kickoff = DateTime.fromISO(finalData.fixture.date, {
+        zone: "America/Sao_Paulo",
+      }).toFormat("cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm");
+      const competition =
+        finalData.league?.name
+          ?.toUpperCase()
+          .replace("SÉRIE A", "BRASILEIRÃO") ?? "COMPETIÇÃO";
+      const round = formatOrdinalRound(finalData.league?.round || "");
 
       let scoreLine = `${home} ${score.home} x ${score.away} ${away}`;
       if (status === "AET") scoreLine += " (após prorrogação)";
@@ -148,7 +179,9 @@ ${formatStats(finalData)}
         scoreLine += ` (pênaltis: ${pen.home} x ${pen.away})`;
       }
 
-      const title = `[PÓS-JOGO] ${scoreLine}`;
+      const ordinalRound = formatOrdinalRound;
+
+      const title = `[PÓS-JOGO] | ${competition} | ${home.toUpperCase()} X ${away.toUpperCase()} | ${ordinalRound}`;
       const body = `
 ## 📊 Resultado Final
 

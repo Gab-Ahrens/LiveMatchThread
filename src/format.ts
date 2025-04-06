@@ -11,6 +11,16 @@ function formatCompetition(name: string): string {
   return name.toUpperCase();
 }
 
+function formatOrdinalRound(round: string): string {
+  const rodadaMatch = round.match(
+    /(Regular Season|Temporada Regular)\s*-\s*(\d+)/i
+  );
+  if (rodadaMatch) return `${rodadaMatch[2]}ª RODADA`;
+
+  return formatRound(round); // fallback to other logic
+}
+
+
 function formatRound(round: string): string {
   // Group Stage
   const groupMatch = round.match(/Group Stage - (\w)/i);
@@ -101,9 +111,8 @@ export function formatMatchTitle(match: any): string {
   const { teams, league } = match;
   const home = teams.home.name.toUpperCase();
   const away = teams.away.name.toUpperCase();
-
   const competition = formatCompetition(league.name);
-  const round = formatRound(league.round);
+  const round = formatOrdinalRound(league.round);
 
   return `[JOGO] | ${competition} | ${home} X ${away} | ${round}`;
 }
