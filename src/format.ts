@@ -3,7 +3,7 @@ function formatCompetition(name: string): string {
     return 'LIBERTADORES';
   }
   if (name.toLowerCase().includes('serie a')) {
-    return 'BRASILEIRÃO SÉRIE A';
+    return 'BRASILEIRÃO';
   }
   if (name.toLowerCase().includes('copa do brasil')) {
     return 'COPA DO BRASIL';
