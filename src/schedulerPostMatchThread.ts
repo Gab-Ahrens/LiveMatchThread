@@ -130,9 +130,11 @@ async function renderAndPrintPostMatch(finalData: any) {
     .setLocale("pt-BR")
     .toFormat("cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm");
 
-  const competition =
-    finalData.league?.name?.toUpperCase().replace("SÉRIE A", "BRASILEIRÃO") ??
-    "COMPETIÇÃO";
+  const leagueName =
+    finalData.league?.name ?? finalData.league?.name ?? "COMPETIÇÃO";
+  const competition = leagueName
+    .toUpperCase()
+    .replace("SÉRIE A", "BRASILEIRÃO");
   const round = formatOrdinalRound(finalData.league?.round || "");
 
   let scoreLine = `${home} ${score.home} x ${score.away} ${away}`;
