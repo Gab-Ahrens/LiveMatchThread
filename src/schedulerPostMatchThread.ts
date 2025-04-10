@@ -72,13 +72,7 @@ function formatOrdinalRound(round: string): string {
   return round.toUpperCase();
 }
 
-export async function startPostMatchScheduler() {
-  const match = await fetchNextMatch();
-  if (!match) {
-    console.log("⚠️ No upcoming match found for post-match scheduler.");
-    return;
-  }
-
+export async function startPostMatchScheduler(match: any) {
   const matchId = match.fixture.id;
 
   // 🧪 If mock + dry run, preview immediately

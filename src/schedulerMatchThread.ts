@@ -11,7 +11,7 @@ const USE_MOCK = process.env.USE_MOCK_DATA === "true";
 
 let scheduledMatchId: number | null = null;
 
-export async function startScheduler() {
+export async function startScheduler(match: any) {
   const now = DateTime.now()
     .setZone("Europe/Amsterdam")
     .toFormat("cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm:ss");
@@ -25,7 +25,6 @@ export async function startScheduler() {
     }`
   );
 
-  const match = await fetchNextMatch();
 
   if (!match) {
     console.log("⚠️ No upcoming match found.");

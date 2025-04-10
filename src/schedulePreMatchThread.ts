@@ -1,36 +1,19 @@
-import { fetchNextMatch } from "./api";
 import { postMatchThread } from "./reddit";
 import { DateTime } from "luxon";
-import dotenv from "dotenv";
-
-dotenv.config();
 
 const DRY_RUN = process.env.DRY_RUN === "true";
-const USE_MOCK = process.env.USE_MOCK_DATA === "true";
 
-export async function startPreMatchScheduler() {
-  const match = await fetchNextMatch();
-  if (!match) {
-    console.log("⚠️ No upcoming match found for pre-match scheduler.");
-    return;
-  }
-
+export async function startPreMatchScheduler(match: any) {
   const matchStart = DateTime.fromISO(match.fixture.date, { zone: "utc" });
   const postAt = matchStart.minus({ hours: 12 });
   const now = DateTime.utc();
   const waitMs = postAt.diff(now).as("milliseconds");
 
-  if (DRY_RUN && USE_MOCK) {
-    console.log("🧪 [MOCK] Previewing pre-match thread immediately.");
-    await renderAndPrintPreMatchThread(match);
-    return;
-  }
-
   if (waitMs > 0) {
     console.log(
       `⏳ Waiting until ${postAt.toISO()} UTC to post pre-match thread...`
     );
-    await new Promise((resolve) => setTimeout(resolve, waitMs));
+    await new Promise((res) => setTimeout(res, waitMs));
   } else {
     console.warn(
       "⚠️ Scheduled pre-match time already passed. Posting immediately..."
@@ -44,7 +27,6 @@ async function renderAndPrintPreMatchThread(match: any) {
   const home = match.teams.home.name.toUpperCase();
   const away = match.teams.away.name.toUpperCase();
   const venue = match.fixture.venue;
-
   const kickoff = DateTime.fromISO(match.fixture.date, {
     zone: "America/Sao_Paulo",
   })
@@ -80,11 +62,7 @@ async function renderAndPrintPreMatchThread(match: any) {
 }
 
 function formatCompetitionName(rawName: string): string {
-  const normalized = rawName
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // Remove accents
-    .toUpperCase();
-
+  const normalized = rawName.normalize("NFD").replace(/[̀-ͯ]/g, "").toUpperCase();
   return normalized.includes("SERIE A") ? "BRASILEIRÃO" : normalized;
 }
 
