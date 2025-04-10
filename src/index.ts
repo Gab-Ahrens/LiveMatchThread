@@ -1,22 +1,24 @@
+import dotenv from "dotenv";
 import { fetchNextMatch } from "./api";
 import { startPreMatchScheduler } from "./schedulerPreMatchThread";
-import { startScheduler } from "./schedulerMatchThread";
+import { startScheduler as startMatchThreadScheduler } from "./schedulerMatchThread";
 import { startPostMatchScheduler } from "./schedulerPostMatchThread";
 
-async function main() {
-  console.log("🚀 Starting LiveMatchThread bot...");
+dotenv.config();
+
+async function startAllSchedulers() {
+  console.log("🚦 Starting all schedulers...");
 
   const match = await fetchNextMatch();
 
   if (!match) {
-    console.warn("⚠️ No upcoming match available. Exiting.");
+    console.log("❌ No upcoming match found. Exiting schedulers.");
     return;
   }
 
-  // Pass the match to each scheduler
   startPreMatchScheduler(match);
-  startScheduler(match);
+  startMatchThreadScheduler(match);
   startPostMatchScheduler(match);
 }
 
-main();
+startAllSchedulers();
