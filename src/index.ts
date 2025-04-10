@@ -1,13 +1,13 @@
-import dotenv from "dotenv";
 import { fetchNextMatch } from "./api";
 import { startPreMatchScheduler } from "./schedulerPreMatchThread";
 import { startScheduler as startMatchThreadScheduler } from "./schedulerMatchThread";
 import { startPostMatchScheduler } from "./schedulerPostMatchThread";
-
-dotenv.config();
+import { DRY_RUN, USE_MOCK_DATA } from "./config";
 
 async function startAllSchedulers() {
-  console.log("🚦 Starting all schedulers...");
+  console.log(
+    `🚦 Starting all schedulers in ${DRY_RUN ? "DRY RUN 🧪" : "LIVE MODE 🚀"}`
+  );
 
   const match = await fetchNextMatch();
 

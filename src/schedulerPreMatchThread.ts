@@ -1,8 +1,7 @@
 import { postMatchThread } from "./reddit";
 import { DateTime } from "luxon";
 import { isThreadPosted, markThreadPosted } from "./threadState";
-
-const DRY_RUN = process.env.DRY_RUN === "true";
+import { DRY_RUN, USE_MOCK_DATA } from "./config";
 
 export async function startPreMatchScheduler(match: any) {
   const matchStart = DateTime.fromISO(match.fixture.date, { zone: "utc" });

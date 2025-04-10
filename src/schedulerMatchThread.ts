@@ -3,11 +3,10 @@ import { formatMatchThread, formatMatchTitle } from "./format";
 import { postMatchThread } from "./reddit";
 import { DateTime } from "luxon";
 import { isThreadPosted, markThreadPosted } from "./threadState";
+import { DRY_RUN, USE_MOCK_DATA } from "./config";
 import dotenv from "dotenv";
 
 dotenv.config();
-
-const DRY_RUN = process.env.DRY_RUN === "true";
 
 let scheduledMatchId: number | null = null;
 

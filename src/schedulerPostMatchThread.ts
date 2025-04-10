@@ -2,12 +2,11 @@ import { fetchFinalMatchData } from "./api";
 import { postMatchThread } from "./reddit";
 import { DateTime } from "luxon";
 import { isThreadPosted, markThreadPosted } from "./threadState";
+import { DRY_RUN, USE_MOCK_DATA } from "./config";
 import axios from "axios";
 import dotenv from "dotenv";
 
 dotenv.config();
-
-const DRY_RUN = process.env.DRY_RUN === "true";
 
 async function fetchMatchStatus(fixtureId: number): Promise<string> {
   const response = await axios.get(

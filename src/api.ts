@@ -1,21 +1,21 @@
 import fs from "fs";
 import path from "path";
 import axios from "axios";
-import dotenv from "dotenv";
-
-dotenv.config();
-
-const USE_MOCK = process.env.USE_MOCK_DATA === "true";
-const API_BASE_URL = "https://api-football-v1.p.rapidapi.com/v3";
-const TEAM_ID = 119;
-const SEASON = 2025;
+import {
+  USE_MOCK_DATA,
+  API_BASE_URL,
+  TEAM_ID,
+  SEASON,
+  RAPIDAPI_KEY,
+  RAPIDAPI_HOST,
+} from "./config";
 
 async function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export async function fetchNextMatch(retries = 3): Promise<any | null> {
-  if (USE_MOCK) {
+  if (USE_MOCK_DATA) {
     console.log("🧪 Using mock data for next match.");
     const filePath = path.join(__dirname, "..", "mock-next-match.json");
     const content = fs.readFileSync(filePath, "utf-8");
@@ -29,19 +29,14 @@ export async function fetchNextMatch(retries = 3): Promise<any | null> {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const response = await axios.get(`${API_BASE_URL}/fixtures`, {
-        params: {
-          team: TEAM_ID,
-          season: SEASON,
-          next: 1,
-        },
+        params: { team: TEAM_ID, season: SEASON, next: 1 },
         headers: {
-          "x-rapidapi-key": process.env.RAPIDAPI_KEY!,
-          "x-rapidapi-host": "api-football-v1.p.rapidapi.com",
+          "x-rapidapi-key": RAPIDAPI_KEY,
+          "x-rapidapi-host": RAPIDAPI_HOST,
         },
       });
 
       const data = response.data.response[0];
-
       if (!data) {
         console.log("⚠️ No upcoming match returned from API.");
         return null;
@@ -65,7 +60,7 @@ export async function fetchNextMatch(retries = 3): Promise<any | null> {
 }
 
 export async function fetchLineups(fixtureId: number) {
-  if (USE_MOCK) {
+  if (USE_MOCK_DATA) {
     console.log("🧪 Using mock data for lineups.");
     const filePath = path.join(__dirname, "..", "mock-lineups.json");
     const content = fs.readFileSync(filePath, "utf-8");
@@ -77,8 +72,8 @@ export async function fetchLineups(fixtureId: number) {
   const response = await axios.get(`${API_BASE_URL}/fixtures/lineups`, {
     params: { fixture: fixtureId },
     headers: {
-      "x-rapidapi-key": process.env.RAPIDAPI_KEY!,
-      "x-rapidapi-host": "api-football-v1.p.rapidapi.com",
+      "x-rapidapi-key": RAPIDAPI_KEY,
+      "x-rapidapi-host": RAPIDAPI_HOST,
     },
   });
 
@@ -86,7 +81,7 @@ export async function fetchLineups(fixtureId: number) {
 }
 
 export async function fetchFinalMatchData(fixtureId: number) {
-  if (USE_MOCK) {
+  if (USE_MOCK_DATA) {
     console.log("🧪 Using mock data for final match info.");
     const filePath = path.join(__dirname, "..", "mock-final-match.json");
     const content = fs.readFileSync(filePath, "utf-8");
@@ -99,22 +94,22 @@ export async function fetchFinalMatchData(fixtureId: number) {
     axios.get(`${API_BASE_URL}/fixtures`, {
       params: { id: fixtureId },
       headers: {
-        "x-rapidapi-key": process.env.RAPIDAPI_KEY!,
-        "x-rapidapi-host": "api-football-v1.p.rapidapi.com",
+        "x-rapidapi-key": RAPIDAPI_KEY,
+        "x-rapidapi-host": RAPIDAPI_HOST,
       },
     }),
     axios.get(`${API_BASE_URL}/fixtures/events`, {
       params: { fixture: fixtureId },
       headers: {
-        "x-rapidapi-key": process.env.RAPIDAPI_KEY!,
-        "x-rapidapi-host": "api-football-v1.p.rapidapi.com",
+        "x-rapidapi-key": RAPIDAPI_KEY,
+        "x-rapidapi-host": RAPIDAPI_HOST,
       },
     }),
     axios.get(`${API_BASE_URL}/fixtures/statistics`, {
       params: { fixture: fixtureId },
       headers: {
-        "x-rapidapi-key": process.env.RAPIDAPI_KEY!,
-        "x-rapidapi-host": "api-football-v1.p.rapidapi.com",
+        "x-rapidapi-key": RAPIDAPI_KEY,
+        "x-rapidapi-host": RAPIDAPI_HOST,
       },
     }),
   ]);
