@@ -1,13 +1,13 @@
-import { fetchNextMatch, fetchFinalMatchData } from "./api";
+import { fetchFinalMatchData } from "./api";
 import { postMatchThread } from "./reddit";
 import { DateTime } from "luxon";
-import dotenv from "dotenv";
+import { isThreadPosted, markThreadPosted } from "./threadState";
 import axios from "axios";
+import dotenv from "dotenv";
 
 dotenv.config();
 
 const DRY_RUN = process.env.DRY_RUN === "true";
-const USE_MOCK = process.env.USE_MOCK_DATA === "true";
 
 async function fetchMatchStatus(fixtureId: number): Promise<string> {
   const response = await axios.get(
@@ -75,8 +75,12 @@ function formatOrdinalRound(round: string): string {
 export async function startPostMatchScheduler(match: any) {
   const matchId = match.fixture.id;
 
-  // 🧪 If mock + dry run, preview immediately
-  if (DRY_RUN && USE_MOCK) {
+  if (isThreadPosted(matchId, "postMatchPosted")) {
+    console.log("✅ Post-match thread already posted. Skipping.");
+    return;
+  }
+
+  if (DRY_RUN) {
     console.log(
       "🧪 [MOCK] Previewing post-match thread immediately (no polling)."
     );
@@ -85,7 +89,6 @@ export async function startPostMatchScheduler(match: any) {
     return;
   }
 
-  // 🕒 Wait 2 hours after match start
   const matchStartUTC = DateTime.fromISO(match.fixture.date, { zone: "utc" });
   const startPollingAt = matchStartUTC.plus({ hours: 2 });
   const now = DateTime.utc();
@@ -109,8 +112,11 @@ export async function startPostMatchScheduler(match: any) {
       clearInterval(interval);
       const finalData = await fetchFinalMatchData(matchId);
       await renderAndPrintPostMatch(finalData);
+      if (!DRY_RUN) {
+        markThreadPosted(matchId, "postMatchPosted");
+      }
     }
-  }, 2 * 60 * 1000);
+  }, 2 * 60 * 1000); // every 2 minutes
 }
 
 async function renderAndPrintPostMatch(finalData: any) {
@@ -118,14 +124,14 @@ async function renderAndPrintPostMatch(finalData: any) {
   const away = finalData.teams.away.name.toUpperCase();
   const score = finalData.score.fulltime;
   const venue = finalData.fixture.venue;
+
   const kickoff = DateTime.fromISO(finalData.fixture.date, {
     zone: "America/Sao_Paulo",
   })
     .setLocale("pt-BR")
     .toFormat("cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm");
 
-  const leagueName =
-    finalData.league?.name ?? finalData.league?.name ?? "COMPETIÇÃO";
+  const leagueName = finalData.league?.name ?? "COMPETIÇÃO";
   const competition = leagueName
     .toUpperCase()
     .replace("SÉRIE A", "BRASILEIRÃO");
@@ -133,6 +139,7 @@ async function renderAndPrintPostMatch(finalData: any) {
 
   let scoreLine = `${home} ${score.home} x ${score.away} ${away}`;
   const status = finalData.fixture.status?.short || "FT";
+
   if (status === "AET") scoreLine += " (após prorrogação)";
   if (status === "PEN") {
     const pen = finalData.score.penalty;

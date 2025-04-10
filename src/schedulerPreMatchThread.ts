@@ -1,5 +1,6 @@
 import { postMatchThread } from "./reddit";
 import { DateTime } from "luxon";
+import { isThreadPosted, markThreadPosted } from "./threadState";
 
 const DRY_RUN = process.env.DRY_RUN === "true";
 
@@ -8,6 +9,13 @@ export async function startPreMatchScheduler(match: any) {
   const postAt = matchStart.minus({ hours: 12 });
   const now = DateTime.utc();
   const waitMs = postAt.diff(now).as("milliseconds");
+
+  const matchId = match.fixture.id;
+
+  if (isThreadPosted(matchId, "preMatchPosted")) {
+    console.log("✅ Pre-match thread already posted. Skipping.");
+    return;
+  }
 
   if (waitMs > 0) {
     console.log(
@@ -21,6 +29,9 @@ export async function startPreMatchScheduler(match: any) {
   }
 
   await renderAndPrintPreMatchThread(match);
+  if (!DRY_RUN) {
+    markThreadPosted(matchId, "preMatchPosted");
+  }
 }
 
 async function renderAndPrintPreMatchThread(match: any) {

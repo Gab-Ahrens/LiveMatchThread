@@ -1,5 +1,5 @@
 import { fetchNextMatch } from "./api";
-import { startPreMatchScheduler } from "./schedulePreMatchThread";
+import { startPreMatchScheduler } from "./schedulerPreMatchThread";
 import { startScheduler } from "./schedulerMatchThread";
 import { startPostMatchScheduler } from "./schedulerPostMatchThread";
 

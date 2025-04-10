@@ -1,13 +1,13 @@
-import { fetchNextMatch, fetchLineups } from "./api";
+import { fetchLineups } from "./api";
 import { formatMatchThread, formatMatchTitle } from "./format";
 import { postMatchThread } from "./reddit";
 import { DateTime } from "luxon";
+import { isThreadPosted, markThreadPosted } from "./threadState";
 import dotenv from "dotenv";
 
 dotenv.config();
 
 const DRY_RUN = process.env.DRY_RUN === "true";
-const USE_MOCK = process.env.USE_MOCK_DATA === "true";
 
 let scheduledMatchId: number | null = null;
 
@@ -19,27 +19,19 @@ export async function startScheduler(match: any) {
   console.log(
     `\n📅 [${now}] Iniciando checagem agendada para a próxima partida...`
   );
-  console.log(
-    `🔍 Fetching next match data ${
-      USE_MOCK ? "[Mock data 🧪]" : "[Live data ☁️]"
-    }`
-  );
 
+  const matchId = match.fixture.id;
 
-  if (!match) {
-    console.log("⚠️ No upcoming match found.");
+  if (isThreadPosted(matchId, "matchThreadPosted")) {
+    console.log("✅ Match thread already posted. Skipping.");
     return;
   }
 
-  const matchId = match.fixture.id;
   const matchDateUTC = DateTime.fromISO(match.fixture.date, { zone: "utc" });
-
-  // Schedule to post 15 minutes before the match (Amsterdam time)
   const postTimeAmsterdam = matchDateUTC
     .setZone("Europe/Amsterdam")
     .minus({ minutes: 8 });
   const postTimeUTC = postTimeAmsterdam.setZone("utc");
-
   const delay = postTimeUTC.diff(DateTime.utc(), "milliseconds").milliseconds;
 
   const lineups = await fetchLineups(matchId);
@@ -73,6 +65,9 @@ export async function startScheduler(match: any) {
       console.log("🚀 Posting match thread!");
       await postMatchThread(title, body);
     }
+    if (!DRY_RUN) {
+      markThreadPosted(matchId, "matchThreadPosted");
+    }
     return;
   }
 
@@ -80,10 +75,6 @@ export async function startScheduler(match: any) {
 
   setTimeout(async () => {
     console.log("⏰ Scheduled match time reached, preparing thread...");
-
-    const title = formatMatchTitle(match);
-    const body = formatMatchThread(match, lineups);
-
     if (DRY_RUN) {
       console.log("🚧 [DRY RUN] Simulating post.");
       console.log(`Title: ${title}`);
@@ -91,8 +82,8 @@ export async function startScheduler(match: any) {
     } else {
       console.log("🚀 Posting match thread!");
       await postMatchThread(title, body);
+      markThreadPosted(matchId, "matchThreadPosted");
     }
-
     scheduledMatchId = null;
   }, delay);
 
