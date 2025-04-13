@@ -3,10 +3,12 @@ import { formatMatchThread, formatMatchTitle } from "./format";
 import { postMatchThread } from "./reddit";
 import { DateTime } from "luxon";
 import { isThreadPosted, markThreadPosted } from "./threadState";
-import { DRY_RUN, USE_MOCK_DATA } from "./config";
 import dotenv from "dotenv";
 
 dotenv.config();
+
+const DRY_RUN = process.env.DRY_RUN === "true";
+const USE_MOCK = process.env.USE_MOCK_DATA === "true";
 
 let scheduledMatchId: number | null = null;
 
@@ -18,6 +20,7 @@ export async function startScheduler(match: any) {
   console.log(
     `\n📅 [${now}] Iniciando checagem agendada para a próxima partida...`
   );
+  console.log(`🔍 Using ${USE_MOCK ? "mock data 🧪" : "live data ☁️"}`);
 
   const matchId = match.fixture.id;
 
@@ -33,8 +36,16 @@ export async function startScheduler(match: any) {
   const postTimeUTC = postTimeAmsterdam.setZone("utc");
   const delay = postTimeUTC.diff(DateTime.utc(), "milliseconds").milliseconds;
 
-  const lineups = await fetchLineups(matchId);
   const title = formatMatchTitle(match);
+  let lineups: any = null;
+
+  try {
+    // ⚠️ One-time fetch attempt only
+    lineups = await fetchLineups(matchId);
+  } catch (err) {
+    console.warn("⚠️ Failed to fetch lineups. Posting without them.");
+  }
+
   const body = formatMatchThread(match, lineups);
 
   console.log(`\n🖥️ [PREVIEW] Match Thread Preview:`);
@@ -56,17 +67,7 @@ export async function startScheduler(match: any) {
     console.warn(
       "⚠️ Scheduled time is in the past. Posting thread immediately..."
     );
-    if (DRY_RUN) {
-      console.log("🚧 [DRY RUN] Simulating post.");
-      console.log(`Title: ${title}`);
-      console.log(`Body:\n${body}`);
-    } else {
-      console.log("🚀 Posting match thread!");
-      await postMatchThread(title, body);
-    }
-    if (!DRY_RUN) {
-      markThreadPosted(matchId, "matchThreadPosted");
-    }
+    await maybePost(title, body, matchId);
     return;
   }
 
@@ -74,17 +75,23 @@ export async function startScheduler(match: any) {
 
   setTimeout(async () => {
     console.log("⏰ Scheduled match time reached, preparing thread...");
-    if (DRY_RUN) {
-      console.log("🚧 [DRY RUN] Simulating post.");
-      console.log(`Title: ${title}`);
-      console.log(`Body:\n${body}`);
-    } else {
-      console.log("🚀 Posting match thread!");
-      await postMatchThread(title, body);
-      markThreadPosted(matchId, "matchThreadPosted");
-    }
+
+    await maybePost(title, body, matchId);
+
     scheduledMatchId = null;
   }, delay);
 
   scheduledMatchId = matchId;
+}
+
+async function maybePost(title: string, body: string, matchId: number) {
+  if (DRY_RUN) {
+    console.log("🚧 [DRY RUN] Simulating post.");
+    console.log(`Title: ${title}`);
+    console.log(`Body:\n${body}`);
+  } else {
+    console.log("🚀 Posting match thread!");
+    await postMatchThread(title, body);
+    markThreadPosted(matchId, "matchThreadPosted");
+  }
 }
