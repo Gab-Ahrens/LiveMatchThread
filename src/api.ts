@@ -141,3 +141,20 @@ export async function fetchMatchStatus(fixtureId: number): Promise<string> {
     return "NS";
   }
 }
+
+export async function fetchLast5Matches(
+  teamId: number,
+  leagueId: number,
+  season: number
+) {
+  const response = await axios.get(`${API_BASE_URL}/fixtures`, {
+    params: {
+      team: teamId,
+      league: leagueId,
+      season: season,
+      last: 5,
+    },
+    headers: HEADERS,
+  });
+  return response.data.response;
+}

@@ -46,7 +46,7 @@ export async function startScheduler(match: any) {
     console.warn("⚠️ Failed to fetch lineups. Posting without them.");
   }
 
-  const body = formatMatchThread(match, lineups);
+  const body = await formatMatchThread(match, lineups);
 
   console.log(`\n🖥️ [PREVIEW] Match Thread Preview:`);
   console.log(`Title: ${title}`);
