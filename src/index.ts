@@ -1,8 +1,8 @@
 import { fetchNextMatch } from "./api";
-import { startPostMatchScheduler } from "./schedulerPostMatchThread";
 import { DRY_RUN, USE_MOCK_DATA } from "./config";
 import { PreMatchScheduler } from "./schedulers/PreMatchScheduler";
 import { MatchThreadScheduler } from "./schedulers/MatchThreadScheduler";
+import { PostMatchScheduler } from "./schedulers/PostMatchScheduler";
 
 async function startAllSchedulers() {
   console.log(
@@ -23,8 +23,8 @@ async function startAllSchedulers() {
   const matchThreadScheduler = new MatchThreadScheduler(match);
   await matchThreadScheduler.start();
 
-  // Continue using existing function-based scheduler for now
-  startPostMatchScheduler(match);
+  const postMatchScheduler = new PostMatchScheduler(match);
+  await postMatchScheduler.start();
 }
 
 startAllSchedulers();
