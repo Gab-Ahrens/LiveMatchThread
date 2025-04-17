@@ -23,16 +23,23 @@ export class MatchThreadScheduler extends BaseScheduler {
     console.log("\n📋 [PREVIEW] Match Thread:");
     console.log(`🔍 Using ${USE_MOCK_DATA ? "mock data 🧪" : "live data ☁️"}`);
 
-    // Fetch the lineups if we haven't already
-    if (!this.lineups) {
+    // For preview, we'll try to get lineups, but it's okay if they're not available yet
+    try {
       this.lineups = await this.fetchLineupsWithRetry(this.match.fixture.id);
+      console.log(
+        this.lineups && this.lineups.length > 0
+          ? "✅ Lineups available for preview"
+          : "ℹ️ Lineups not available yet for preview"
+      );
+    } catch (err) {
+      console.log(
+        "ℹ️ Couldn't fetch lineups for preview (they may not be available yet)"
+      );
     }
 
-    // Generate the title and body if we haven't already
-    if (!this.title || !this.body) {
-      this.title = formatMatchTitle(this.match);
-      this.body = await formatMatchThread(this.match, this.lineups);
-    }
+    // Generate the title and preview body
+    this.title = formatMatchTitle(this.match);
+    this.body = await formatMatchThread(this.match, this.lineups);
 
     // Show the preview
     console.log(`Title: ${this.title}`);
@@ -53,17 +60,6 @@ export class MatchThreadScheduler extends BaseScheduler {
   }
 
   async createAndPostThread(): Promise<void> {
-    // Fetch lineups if we haven't already
-    if (!this.lineups) {
-      this.lineups = await this.fetchLineupsWithRetry(this.match.fixture.id);
-    }
-
-    // Generate content if we haven't already
-    if (!this.title || !this.body) {
-      this.title = formatMatchTitle(this.match);
-      this.body = await formatMatchThread(this.match, this.lineups);
-    }
-
     const matchId = this.match.fixture.id;
 
     // Calculate posting time
@@ -78,8 +74,51 @@ export class MatchThreadScheduler extends BaseScheduler {
       return;
     }
 
+    // Wait until 1 hour before match to attempt to fetch lineups
+    const lineupsAttemptTime = matchDateUTC.minus({ minutes: 60 });
+
+    // First, wait until time to fetch lineups
+    if (DateTime.now() < lineupsAttemptTime) {
+      console.log("⏳ Waiting until 1 hour before kickoff to fetch lineups...");
+      console.log(
+        `Will attempt to fetch lineups at: ${lineupsAttemptTime.toFormat(
+          "cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm:ss"
+        )} (UTC)`
+      );
+
+      await this.waitUntil(lineupsAttemptTime);
+    }
+
+    // Now try to get lineups
+    console.log(
+      "🔄 Attempting to fetch latest lineups (1 hour before kickoff)..."
+    );
+    this.lineups = await this.fetchLineupsWithRetry(matchId);
+
+    // Generate content with the freshly fetched lineups
+    this.title = formatMatchTitle(this.match);
+    this.body = await formatMatchThread(this.match, this.lineups);
+
     // Wait until posting time
     await this.waitUntil(postTimeUTC);
+
+    // One final attempt to get or update lineups right before posting
+    // (Some lineups might be released very close to kickoff)
+    console.log(
+      "🔄 Final attempt to fetch or update lineups before posting..."
+    );
+    const finalLineups = await this.fetchLineupsWithRetry(matchId);
+
+    // If we got new lineups in the final attempt, update the body
+    if (
+      finalLineups &&
+      finalLineups.length > 0 &&
+      (!this.lineups || this.lineups.length === 0)
+    ) {
+      console.log("✅ Got lineups in final attempt, updating thread content");
+      this.lineups = finalLineups;
+      this.body = await formatMatchThread(this.match, this.lineups);
+    }
 
     // Post thread
     await this.postThread(this.title, this.body);
@@ -125,7 +164,7 @@ export class MatchThreadScheduler extends BaseScheduler {
 
     if (!lineups || lineups.length === 0) {
       console.warn(
-        "❌ All lineup fetch attempts failed. Posting without lineups."
+        "❌ All lineup fetch attempts failed. Will continue without lineups."
       );
     }
 
