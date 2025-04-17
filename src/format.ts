@@ -1,6 +1,6 @@
 import { fetchLast5Matches } from "./api";
 
-function formatCompetition(name: string): string {
+export function formatCompetition(name: string): string {
   if (name.toLowerCase().includes("libertadores")) {
     return "LIBERTADORES";
   }
@@ -41,20 +41,31 @@ function formatRound(round: string): string {
     .toUpperCase();
 }
 
-function formatLineups(lineups: any[]): string {
+export function formatLineups(lineups: any[]): string {
   if (!lineups || lineups.length === 0)
     return "Escalações indisponíveis no momento.";
 
   return lineups
     .map((team) => {
+      if (!team || !team.team) {
+        console.log("⚠️ Invalid lineup data for a team:", team);
+        return "**Dados de escalação inválidos**";
+      }
+
       const coach = team.coach?.name || "Desconhecido";
       const starters =
         team.startXI
-          ?.map((p: { player: { name: any } }) => p.player.name)
+          ?.filter(Boolean)
+          ?.map(
+            (p: { player: { name: any } }) => p.player?.name || "Desconhecido"
+          )
           .join(", ") || "N/A";
       const subs =
         team.substitutes
-          ?.map((p: { player: { name: any } }) => p.player.name)
+          ?.filter(Boolean)
+          ?.map(
+            (p: { player: { name: any } }) => p.player?.name || "Desconhecido"
+          )
           .join(", ") || "N/A";
 
       return `
@@ -96,7 +107,6 @@ export function formatLast5Results(matches: any[], teamId: number): string {
     })
     .join("\n");
 }
-
 
 export async function formatMatchThread(
   match: any,
@@ -143,7 +153,6 @@ ${awayResults}
     ? formatLineups(lineups)
     : "Escalações indisponíveis no momento.";
 
-
   console.log(`homeResults log`, homeResults);
   console.log(`awayResults log`, awayResults);
   const threadBody = `
@@ -174,4 +183,3 @@ ${last5Section}
 
   return threadBody;
 }
-

@@ -2,17 +2,22 @@ import fs from "fs";
 import path from "path";
 import axios from "axios";
 import dotenv from "dotenv";
+import {
+  USE_MOCK_DATA,
+  API_BASE_URL,
+  TEAM_ID,
+  SEASON,
+  RAPIDAPI_KEY,
+  RAPIDAPI_HOST,
+} from "./config";
 
 dotenv.config();
 
-const USE_MOCK = process.env.USE_MOCK_DATA === "true";
-const API_BASE_URL = "https://api-football-v1.p.rapidapi.com/v3";
-const TEAM_ID = 119;
-const SEASON = 2025;
+const USE_MOCK = USE_MOCK_DATA;
 
 const HEADERS = {
-  "x-rapidapi-key": process.env.RAPIDAPI_KEY!,
-  "x-rapidapi-host": "api-football-v1.p.rapidapi.com",
+  "x-rapidapi-key": RAPIDAPI_KEY,
+  "x-rapidapi-host": RAPIDAPI_HOST,
 };
 
 async function wait(ms: number) {

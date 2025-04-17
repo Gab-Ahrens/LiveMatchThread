@@ -3,6 +3,7 @@ import { postMatchThread } from "./reddit";
 import { DateTime } from "luxon";
 import { isThreadPosted, markThreadPosted } from "./threadState";
 import { DRY_RUN } from "./config";
+import { formatCompetition } from "./format";
 
 export async function startPostMatchScheduler(match: any) {
   const matchId = match.fixture.id;
@@ -68,9 +69,7 @@ async function renderAndPrintPostMatch(finalData: any) {
     .toFormat("cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm");
 
   const leagueName = finalData.league?.name ?? "COMPETIÇÃO";
-  const competition = leagueName
-    .toUpperCase()
-    .replace("SÉRIE A", "BRASILEIRÃO");
+  const competition = formatCompetition(leagueName);
   const round = formatOrdinalRound(finalData.league?.round || "");
 
   let scoreLine = `${home} ${score.home} x ${score.away} ${away}`;
@@ -81,7 +80,7 @@ async function renderAndPrintPostMatch(finalData: any) {
     scoreLine += ` (pênaltis: ${pen.home} x ${pen.away})`;
   }
 
-  const title = `[PÓS-JOGO] | ${competition} | ${home} X ${away} | ${round}`;
+  const title = `[PÓS-JOGO] | ${competition} | ${home} ${score.home} X ${score.away} ${away} | ${round}`;
   const body = `
 ## 📊 Resultado Final
 
@@ -140,10 +139,31 @@ function formatStats(finalData: any): string {
     "|-------------|------------------|------------------|",
   ];
 
+  const translationMap: { [key: string]: string } = {
+    "Ball Possession": "Posse de Bola",
+    "Total Shots": "Finalizações",
+    "Shots on Goal": "Finalizações no Gol",
+    "Shots off Goal": "Finalizações para Fora",
+    "Blocked Shots": "Finalizações Bloqueadas",
+    "Shots insidebox": "Finalizações Dentro da Área",
+    "Shots outsidebox": "Finalizações Fora da Área",
+    Fouls: "Faltas",
+    "Corner Kicks": "Escanteios",
+    Offsides: "Impedimentos",
+    "Yellow Cards": "Cartões Amarelos",
+    "Red Cards": "Cartões Vermelhos",
+    "Goalkeeper Saves": "Defesas do Goleiro",
+    "Total passes": "Total de Passes",
+    "Passes accurate": "Passes Certos",
+    "Passes %": "Precisão de Passes",
+    "Expected goals": "Expected Goals (xG)",
+  };
+
   for (let i = 0; i < homeStats.statistics.length; i++) {
     const stat = homeStats.statistics[i];
     const awayStat = awayStats.statistics[i];
-    lines.push(`| ${stat.type} | ${stat.value} | ${awayStat?.value ?? "-"} |`);
+    const statName = translationMap[stat.type] || stat.type;
+    lines.push(`| ${statName} | ${stat.value} | ${awayStat?.value ?? "-"} |`);
   }
 
   return lines.join("\n");

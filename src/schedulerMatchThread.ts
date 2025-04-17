@@ -3,12 +3,9 @@ import { formatMatchThread, formatMatchTitle } from "./format";
 import { postMatchThread } from "./reddit";
 import { DateTime } from "luxon";
 import { isThreadPosted, markThreadPosted } from "./threadState";
-import dotenv from "dotenv";
+import { DRY_RUN, USE_MOCK_DATA } from "./config";
 
-dotenv.config();
-
-const DRY_RUN = process.env.DRY_RUN === "true";
-const USE_MOCK = process.env.USE_MOCK_DATA === "true";
+const USE_MOCK = USE_MOCK_DATA;
 
 let scheduledMatchId: number | null = null;
 
@@ -39,11 +36,42 @@ export async function startScheduler(match: any) {
   const title = formatMatchTitle(match);
   let lineups: any = null;
 
-  try {
-    // ⚠️ One-time fetch attempt only
-    lineups = await fetchLineups(matchId);
-  } catch (err) {
-    console.warn("⚠️ Failed to fetch lineups. Posting without them.");
+  // Try to fetch lineups up to 3 times with delay between attempts
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      console.log(`📋 Fetching lineups, attempt ${attempt}/3...`);
+      lineups = await fetchLineups(matchId);
+
+      if (lineups && lineups.length > 0) {
+        console.log(`✅ Successfully fetched lineups on attempt ${attempt}`);
+        break;
+      } else {
+        console.warn(`⚠️ Lineup data empty or invalid on attempt ${attempt}`);
+
+        if (attempt < 3) {
+          const waitTime = attempt * 10000; // 10s, 20s, 30s
+          console.log(`⏳ Waiting ${waitTime / 1000}s before next attempt...`);
+          await new Promise((res) => setTimeout(res, waitTime));
+        }
+      }
+    } catch (err) {
+      console.warn(
+        `⚠️ Failed to fetch lineups on attempt ${attempt}:`,
+        err instanceof Error ? err.message : err
+      );
+
+      if (attempt < 3) {
+        const waitTime = attempt * 10000; // 10s, 20s, 30s
+        console.log(`⏳ Waiting ${waitTime / 1000}s before next attempt...`);
+        await new Promise((res) => setTimeout(res, waitTime));
+      }
+    }
+  }
+
+  if (!lineups || lineups.length === 0) {
+    console.warn(
+      "❌ All lineup fetch attempts failed. Posting without lineups."
+    );
   }
 
   const body = await formatMatchThread(match, lineups);

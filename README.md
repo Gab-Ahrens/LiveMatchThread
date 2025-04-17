@@ -18,11 +18,19 @@ Automated Reddit bot that posts match threads for SC Internacional matches.
 
 ## Dev Mode
 - `USE_MOCK_DATA=true`: Uses local mock JSONs.
-- `DRY_RUN=true`: Logs thread previews, doesn’t post to Reddit.
+- `DRY_RUN=true`: Logs thread previews, doesn't post to Reddit.
 
 ## Usage
 
 ```bash
+# Install dependencies
 npm install
+
+# Run in dev mode with mock data (doesn't post to Reddit)
+npm run dev:mock
+# OR on Windows, use the batch file:
+./run-dev-mode.bat
+
+# For production use
 npm run build
 npm start
