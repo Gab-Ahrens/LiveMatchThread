@@ -110,9 +110,17 @@ export class PostMatchScheduler extends BaseScheduler {
       .setLocale("pt-BR")
       .toFormat("cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm");
 
-    const leagueName = finalData.league?.name ?? "COMPETIÇÃO";
+    // Use the league information from either the finalData or from the original match data
+    const leagueName =
+      finalData.league?.name || this.match.league?.name || "COMPETIÇÃO";
     const competition = formatCompetition(leagueName);
-    const round = this.formatOrdinalRound(finalData.league?.round || "");
+
+    // Get round from either finalData or original match data
+    const roundValue =
+      finalData.league?.round ||
+      this.match.league?.round ||
+      "Regular Season - 38";
+    const round = this.formatOrdinalRound(roundValue);
 
     let scoreLine = `${home} ${score.home} x ${score.away} ${away}`;
     const status = finalData.fixture.status?.short || "FT";
@@ -124,7 +132,7 @@ export class PostMatchScheduler extends BaseScheduler {
 
     const title = `[PÓS-JOGO] | ${competition} | ${home} ${score.home} X ${score.away} ${away} | ${round}`;
     const body = `
-## 📊 Resultado Final
+## 📊 Resultado Final: ${competition} - ${round}
 
 **${scoreLine}**
 
