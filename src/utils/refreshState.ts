@@ -7,8 +7,11 @@
 import fs from "fs";
 import path from "path";
 
-// Path to the state file
-const REFRESH_STATE_PATH = path.join(__dirname, "../../refresh-state.json");
+// Path to the state file in the data directory
+const REFRESH_STATE_PATH = path.join(
+  __dirname,
+  "../../data/refresh-state.json"
+);
 
 // State interface
 interface RefreshState {
@@ -39,6 +42,12 @@ export function getLastRefreshTime(): Date {
  */
 export function updateRefreshTime(): void {
   try {
+    // Ensure the directory exists
+    const dir = path.dirname(REFRESH_STATE_PATH);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+
     const state: RefreshState = {
       lastRefreshTime: new Date().toISOString(),
     };

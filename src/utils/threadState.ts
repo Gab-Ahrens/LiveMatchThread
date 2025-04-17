@@ -6,8 +6,10 @@
 import fs from "fs";
 import path from "path";
 
-const STATE_PATH = path.join(__dirname, "../..", "thread-state.json");
+// Path to the state file in the data directory
+const STATE_PATH = path.join(__dirname, "../../data/thread-state.json");
 
+// Thread state type
 type ThreadState = {
   [fixtureId: string]: {
     preMatchPosted?: boolean;
@@ -19,28 +21,45 @@ type ThreadState = {
 /**
  * Reads the current thread state from disk
  */
-function readState(): ThreadState {
-  if (!fs.existsSync(STATE_PATH)) return {};
-  const raw = fs.readFileSync(STATE_PATH, "utf-8");
-  return JSON.parse(raw);
+export function readState(): ThreadState {
+  try {
+    if (fs.existsSync(STATE_PATH)) {
+      const rawData = fs.readFileSync(STATE_PATH, "utf8");
+      return JSON.parse(rawData);
+    }
+  } catch (err) {
+    console.error("Error reading thread state:", err);
+  }
+
+  return {};
 }
 
 /**
- * Writes the thread state to disk
+ * Writes the current thread state to disk
  */
-function writeState(state: ThreadState) {
-  fs.writeFileSync(STATE_PATH, JSON.stringify(state, null, 2));
+export function writeState(state: ThreadState): void {
+  try {
+    // Ensure the directory exists
+    const dir = path.dirname(STATE_PATH);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+
+    fs.writeFileSync(STATE_PATH, JSON.stringify(state, null, 2));
+  } catch (err) {
+    console.error("Error writing thread state:", err);
+  }
 }
 
 /**
- * Checks if a thread has already been posted
+ * Checks if a specific thread has been posted
  */
 export function isThreadPosted(
   fixtureId: number,
-  type: keyof ThreadState[string]
-) {
+  threadType: "preMatchPosted" | "matchThreadPosted" | "postMatchPosted"
+): boolean {
   const state = readState();
-  return state[fixtureId]?.[type] === true;
+  return Boolean(state[fixtureId]?.[threadType]);
 }
 
 /**
@@ -48,10 +67,18 @@ export function isThreadPosted(
  */
 export function markThreadPosted(
   fixtureId: number,
-  type: keyof ThreadState[string]
-) {
+  threadType: "preMatchPosted" | "matchThreadPosted" | "postMatchPosted"
+): void {
   const state = readState();
-  if (!state[fixtureId]) state[fixtureId] = {};
-  state[fixtureId][type] = true;
+
+  // Initialize the fixture state if it doesn't exist
+  if (!state[fixtureId]) {
+    state[fixtureId] = {};
+  }
+
+  // Mark the thread as posted
+  state[fixtureId][threadType] = true;
+
+  // Write the updated state
   writeState(state);
 }
