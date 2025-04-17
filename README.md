@@ -5,12 +5,12 @@ Automated Reddit bot that creates and posts match threads for SC Internacional f
 ## Features
 
 ### 🕒 Pre-Match Thread
-- Posted 1 hour before kickoff
+- Posted 24 hours before kickoff
 - Includes: competition, round, teams, stadium, date/time, referee
 - Title format: `[PRÉ-JOGO] | COMPETIÇÃO | TIME DA CASA X TIME VISITANTE | RODADA`
 
 ### ⚽ Match Thread
-- Posted at kickoff time
+- Posted 15 minutes before kickoff
 - Includes: lineups, last 5 match results for both teams, match details
 - Title format: `[JOGO] | COMPETIÇÃO | TIME DA CASA X TIME VISITANTE | RODADA`
 

@@ -50,11 +50,11 @@ export class PreMatchScheduler extends BaseScheduler {
     console.log(`Title: ${content.title}`);
     console.log(`Body:\n${content.body}`);
 
-    // Calculate target time (12 hours before match)
+    // Calculate target time (24 hours before match)
     const matchStart = DateTime.fromISO(this.match.fixture.date, {
       zone: "utc",
     });
-    const postAt = matchStart.minus({ hours: 12 });
+    const postAt = matchStart.minus({ hours: 24 });
 
     console.log(
       `\n🕒 Would be posted at: ${postAt.toFormat(
@@ -65,11 +65,11 @@ export class PreMatchScheduler extends BaseScheduler {
   }
 
   async createAndPostThread(): Promise<void> {
-    // Calculate target time (12 hours before match)
+    // Calculate target time (24 hours before match)
     const matchStart = DateTime.fromISO(this.match.fixture.date, {
       zone: "utc",
     });
-    const postAt = matchStart.minus({ hours: 12 });
+    const postAt = matchStart.minus({ hours: 24 });
 
     // Wait until time to post
     await this.waitUntil(postAt);
