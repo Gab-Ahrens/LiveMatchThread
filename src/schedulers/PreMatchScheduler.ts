@@ -9,24 +9,7 @@ export class PreMatchScheduler extends BaseScheduler {
     super(match, "preMatchPosted");
   }
 
-  async createAndPostThread(): Promise<void> {
-    // Calculate target time (12 hours before match)
-    const matchStart = DateTime.fromISO(this.match.fixture.date, {
-      zone: "utc",
-    });
-    const postAt = matchStart.minus({ hours: 12 });
-
-    // Wait until time to post
-    await this.waitUntil(postAt);
-
-    // Post thread logic
-    const threadContent = this.formatThreadContent();
-    await this.postThread(threadContent.title, threadContent.body);
-
-    // Mark as posted
-    this.markAsPosted();
-  }
-
+  // Generate thread content
   private formatThreadContent() {
     const home = this.match.teams.home.name.toUpperCase();
     const away = this.match.teams.away.name.toUpperCase();
@@ -60,11 +43,49 @@ export class PreMatchScheduler extends BaseScheduler {
     return { title, body };
   }
 
+  // Preview the thread content
+  async previewThreadContent(): Promise<void> {
+    console.log("\n📋 [PREVIEW] Pre-Match Thread:");
+    const content = this.formatThreadContent();
+    console.log(`Title: ${content.title}`);
+    console.log(`Body:\n${content.body}`);
+
+    // Calculate target time (12 hours before match)
+    const matchStart = DateTime.fromISO(this.match.fixture.date, {
+      zone: "utc",
+    });
+    const postAt = matchStart.minus({ hours: 12 });
+
+    console.log(
+      `\n🕒 Would be posted at: ${postAt.toFormat(
+        "cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm:ss"
+      )} (UTC) ${DRY_RUN ? "[DRY RUN 🚧]" : "[LIVE MODE 🚀]"}`
+    );
+    console.log("\n" + "=".repeat(80) + "\n");
+  }
+
+  async createAndPostThread(): Promise<void> {
+    // Calculate target time (12 hours before match)
+    const matchStart = DateTime.fromISO(this.match.fixture.date, {
+      zone: "utc",
+    });
+    const postAt = matchStart.minus({ hours: 12 });
+
+    // Wait until time to post
+    await this.waitUntil(postAt);
+
+    // Post thread logic
+    const threadContent = this.formatThreadContent();
+    await this.postThread(threadContent.title, threadContent.body);
+
+    // Mark as posted
+    this.markAsPosted();
+  }
+
   private async postThread(title: string, body: string) {
     if (DRY_RUN) {
-      console.log("🚧 [DRY RUN] Would post pre-match thread:\n");
-      console.log(`Title: ${title}`);
-      console.log(`Body:\n${body}`);
+      // In dry run mode, we've already shown the preview, so just show a brief message
+      console.log("🚧 [DRY RUN] Pre-match thread would be posted to Reddit");
     } else {
       console.log("🚀 Posting pre-match thread!");
       await postMatchThread(title, body);

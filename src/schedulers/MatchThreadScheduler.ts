@@ -10,20 +10,59 @@ import {
 
 export class MatchThreadScheduler extends BaseScheduler {
   private scheduledMatchId: number | null = null;
+  private lineups: any = null;
+  private title: string = "";
+  private body: string = "";
 
   constructor(match: any) {
     super(match, "matchThreadPosted");
   }
 
-  async createAndPostThread(): Promise<void> {
-    const now = DateTime.now()
-      .setZone("Europe/Amsterdam")
-      .toFormat("cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm:ss");
+  // Preview the thread content
+  async previewThreadContent(): Promise<void> {
+    console.log("\n📋 [PREVIEW] Match Thread:");
+    console.log(`🔍 Using ${USE_MOCK_DATA ? "mock data 🧪" : "live data ☁️"}`);
+
+    // Fetch the lineups if we haven't already
+    if (!this.lineups) {
+      this.lineups = await this.fetchLineupsWithRetry(this.match.fixture.id);
+    }
+
+    // Generate the title and body if we haven't already
+    if (!this.title || !this.body) {
+      this.title = formatMatchTitle(this.match);
+      this.body = await formatMatchThread(this.match, this.lineups);
+    }
+
+    // Show the preview
+    console.log(`Title: ${this.title}`);
+    console.log(`Body:\n${this.body}\n`);
+
+    // Calculate posting time
+    const matchDateUTC = DateTime.fromISO(this.match.fixture.date, {
+      zone: "utc",
+    });
+    const postTimeUTC = matchDateUTC.minus({ minutes: 8 });
 
     console.log(
-      `\n📅 [${now}] Iniciando checagem agendada para a próxima partida...`
+      `🕒 Would be posted at: ${postTimeUTC.toFormat(
+        "cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm:ss"
+      )} (UTC) ${DRY_RUN ? "[DRY RUN 🚧]" : "[LIVE MODE 🚀]"}`
     );
-    console.log(`🔍 Using ${USE_MOCK_DATA ? "mock data 🧪" : "live data ☁️"}`);
+    console.log("\n" + "=".repeat(80) + "\n");
+  }
+
+  async createAndPostThread(): Promise<void> {
+    // Fetch lineups if we haven't already
+    if (!this.lineups) {
+      this.lineups = await this.fetchLineupsWithRetry(this.match.fixture.id);
+    }
+
+    // Generate content if we haven't already
+    if (!this.title || !this.body) {
+      this.title = formatMatchTitle(this.match);
+      this.body = await formatMatchThread(this.match, this.lineups);
+    }
 
     const matchId = this.match.fixture.id;
 
@@ -31,17 +70,7 @@ export class MatchThreadScheduler extends BaseScheduler {
     const matchDateUTC = DateTime.fromISO(this.match.fixture.date, {
       zone: "utc",
     });
-    const postTimeAmsterdam = matchDateUTC
-      .setZone("Europe/Amsterdam")
-      .minus({ minutes: 8 });
-
-    // Prepare thread content
-    const title = formatMatchTitle(this.match);
-    const lineups = await this.fetchLineupsWithRetry(matchId);
-    const body = await formatMatchThread(this.match, lineups);
-
-    // Preview thread content
-    this.previewThread(title, body, postTimeAmsterdam);
+    const postTimeUTC = matchDateUTC.minus({ minutes: 8 });
 
     // Don't schedule if already scheduled
     if (this.scheduledMatchId === matchId) {
@@ -50,10 +79,10 @@ export class MatchThreadScheduler extends BaseScheduler {
     }
 
     // Wait until posting time
-    await this.waitUntil(postTimeAmsterdam);
+    await this.waitUntil(postTimeUTC);
 
     // Post thread
-    await this.postThread(title, body);
+    await this.postThread(this.title, this.body);
     this.markAsPosted();
   }
 
@@ -103,27 +132,10 @@ export class MatchThreadScheduler extends BaseScheduler {
     return lineups;
   }
 
-  private previewThread(
-    title: string,
-    body: string,
-    scheduledTime: DateTime
-  ): void {
-    console.log(`\n🖥️ [PREVIEW] Match Thread Preview:`);
-    console.log(`Title: ${title}`);
-    console.log(`Body:\n${body}\n`);
-
-    console.log(
-      `🕒 Thread will be created at: ${scheduledTime.toFormat(
-        "cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm:ss"
-      )} (Amsterdam) ${DRY_RUN ? "[DRY RUN 🚧]" : "[LIVE MODE 🚀]"}`
-    );
-  }
-
   private async postThread(title: string, body: string): Promise<void> {
     if (DRY_RUN) {
-      console.log("🚧 [DRY RUN] Simulating post.");
-      console.log(`Title: ${title}`);
-      console.log(`Body:\n${body}`);
+      // In dry run mode, we've already shown the preview, so just show a brief message
+      console.log("🚧 [DRY RUN] Match thread would be posted to Reddit");
     } else {
       console.log("🚀 Posting match thread!");
       await postMatchThread(title, body);

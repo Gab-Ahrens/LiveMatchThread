@@ -49,12 +49,21 @@ export abstract class BaseScheduler {
     console.warn("⚠️ Scheduled time is in the past. Running immediately...");
   }
 
-  // Abstract method that each specific scheduler needs to implement
+  // Preview thread content - to be implemented by each scheduler
+  abstract previewThreadContent(): Promise<void>;
+
+  // Create and post the thread - to be implemented by each scheduler
   abstract createAndPostThread(): Promise<void>;
 
   // Start the scheduler
   async start(): Promise<void> {
+    // Always preview the thread content first
+    await this.previewThreadContent();
+
+    // Skip posting if already posted
     if (this.isAlreadyPosted()) return;
+
+    // Otherwise continue with posting
     await this.createAndPostThread();
   }
 }

@@ -21,15 +21,28 @@ async function startAllSchedulers() {
     return;
   }
 
-  // Use class-based schedulers
+  console.log(
+    `📅 Next match: ${match.teams.home.name} vs ${
+      match.teams.away.name
+    } (${new Date(match.fixture.date).toLocaleString()})`
+  );
+
+  // Initialize all schedulers first
   const preMatchScheduler = new PreMatchScheduler(match);
-  await preMatchScheduler.start();
-
   const matchThreadScheduler = new MatchThreadScheduler(match);
-  await matchThreadScheduler.start();
-
   const postMatchScheduler = new PostMatchScheduler(match);
+
+  console.log(
+    "\n🔍 Previewing all threads that will be created for this match:"
+  );
+
+  // Start each scheduler in sequence
+  // This ensures previews appear in the correct order
+  await preMatchScheduler.start();
+  await matchThreadScheduler.start();
   await postMatchScheduler.start();
+
+  console.log("\n✅ All schedulers have been started!");
 }
 
 // Start the bot

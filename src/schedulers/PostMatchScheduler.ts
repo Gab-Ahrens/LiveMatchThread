@@ -1,21 +1,56 @@
 import { BaseScheduler } from "./BaseScheduler";
 import { DateTime } from "luxon";
 import { postMatchThread } from "../reddit/redditClient";
-import { DRY_RUN } from "../config/appConfig";
+import { DRY_RUN, USE_MOCK_DATA } from "../config/appConfig";
 import { fetchFinalMatchData, fetchMatchStatus } from "../api/apiClient";
 import { formatCompetition } from "../formatters/matchFormatters";
 
 export class PostMatchScheduler extends BaseScheduler {
+  private finalData: any = null;
+
   constructor(match: any) {
     super(match, "postMatchPosted");
   }
 
+  // Preview the thread content
+  async previewThreadContent(): Promise<void> {
+    console.log("\n📋 [PREVIEW] Post-Match Thread:");
+    console.log(`🔍 Using ${USE_MOCK_DATA ? "mock data 🧪" : "live data ☁️"}`);
+
+    // Fetch final match data if we haven't already
+    if (!this.finalData) {
+      this.finalData = await fetchFinalMatchData(this.match.fixture.id);
+    }
+
+    // Generate and show preview
+    const { title, body } = this.formatThreadContent(this.finalData);
+    console.log(`Title: ${title}`);
+    console.log(`Body:\n${body}`);
+
+    // Calculate posting time (typically right after match ends)
+    const matchEndUTC = DateTime.fromISO(this.match.fixture.date, {
+      zone: "utc",
+    }).plus({ hours: 2 }); // Assuming match duration of ~2 hours
+
+    console.log(
+      `🕒 Would be posted at: ${matchEndUTC.toFormat(
+        "cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm:ss"
+      )} (UTC) ${
+        DRY_RUN ? "[DRY RUN 🚧]" : "[LIVE MODE 🚀]"
+      } (after match ends)`
+    );
+    console.log("\n" + "=".repeat(80) + "\n");
+  }
+
   async createAndPostThread(): Promise<void> {
-    // If in dry run mode, just preview the post match thread
+    // If in dry run mode, just post the thread without extra messages
     if (DRY_RUN) {
-      console.log("🧪 [MOCK] Previewing post-match thread immediately.");
-      const finalData = await fetchFinalMatchData(this.match.fixture.id);
-      await this.renderAndPostThread(finalData);
+      // Fetch final data if we haven't already
+      if (!this.finalData) {
+        this.finalData = await fetchFinalMatchData(this.match.fixture.id);
+      }
+
+      await this.renderAndPostThread(this.finalData);
       return;
     }
 
@@ -41,8 +76,8 @@ export class PostMatchScheduler extends BaseScheduler {
 
     // If match is finished, post the thread
     if (["FT", "AET", "PEN"].includes(status)) {
-      const finalData = await fetchFinalMatchData(matchId);
-      await this.renderAndPostThread(finalData);
+      this.finalData = await fetchFinalMatchData(matchId);
+      await this.renderAndPostThread(this.finalData);
       return;
     }
 
@@ -55,9 +90,8 @@ export class PostMatchScheduler extends BaseScheduler {
     const { title, body } = this.formatThreadContent(finalData);
 
     if (DRY_RUN) {
-      console.log("🚧 [DRY RUN] Would post post-match thread:\n");
-      console.log(`Title: ${title}`);
-      console.log(`Body:\n${body}`);
+      // In dry run mode, we've already shown the preview, so just show a brief message
+      console.log("🚧 [DRY RUN] Post-match thread would be posted to Reddit");
     } else {
       console.log("🚀 Posting post-match thread!");
       await postMatchThread(title, body);
