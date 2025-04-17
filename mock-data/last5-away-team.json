@@ -1,0 +1,352 @@
+[
+  {
+    "fixture": {
+      "id": 1006025,
+      "referee": "Flavio Rodrigues De Souza",
+      "timezone": "UTC",
+      "date": "2023-12-07T00:30:00+00:00",
+      "timestamp": 1701909000,
+      "periods": {
+        "first": 1701909000,
+        "second": 1701912600
+      },
+      "venue": {
+        "id": 244,
+        "name": "Estádio José Pinheiro Borda",
+        "city": "Porto Alegre, Rio Grande do Sul"
+      },
+      "status": {
+        "long": "Match Finished",
+        "short": "FT",
+        "elapsed": 90,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 71,
+      "name": "Serie A",
+      "country": "Brazil",
+      "logo": "https://media.api-sports.io/football/leagues/71.png",
+      "flag": "https://media.api-sports.io/flags/br.svg",
+      "season": 2023,
+      "round": "Regular Season - 38",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 119,
+        "name": "Internacional",
+        "logo": "https://media.api-sports.io/football/teams/119.png",
+        "winner": true
+      },
+      "away": {
+        "id": 120,
+        "name": "Botafogo",
+        "logo": "https://media.api-sports.io/football/teams/120.png",
+        "winner": false
+      }
+    },
+    "goals": {
+      "home": 3,
+      "away": 1
+    },
+    "score": {
+      "halftime": {
+        "home": 1,
+        "away": 0
+      },
+      "fulltime": {
+        "home": 3,
+        "away": 1
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1006010,
+      "referee": "Wilton Pereira Sampaio",
+      "timezone": "UTC",
+      "date": "2023-12-03T21:30:00+00:00",
+      "timestamp": 1701639000,
+      "periods": {
+        "first": 1701639000,
+        "second": 1701642600
+      },
+      "venue": {
+        "id": 218,
+        "name": "Estádio Nilton Santos",
+        "city": "Rio de Janeiro"
+      },
+      "status": {
+        "long": "Match Finished",
+        "short": "FT",
+        "elapsed": 90,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 71,
+      "name": "Serie A",
+      "country": "Brazil",
+      "logo": "https://media.api-sports.io/football/leagues/71.png",
+      "flag": "https://media.api-sports.io/flags/br.svg",
+      "season": 2023,
+      "round": "Regular Season - 37",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 120,
+        "name": "Botafogo",
+        "logo": "https://media.api-sports.io/football/teams/120.png",
+        "winner": null
+      },
+      "away": {
+        "id": 135,
+        "name": "Cruzeiro",
+        "logo": "https://media.api-sports.io/football/teams/135.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": 0,
+      "away": 0
+    },
+    "score": {
+      "halftime": {
+        "home": 0,
+        "away": 0
+      },
+      "fulltime": {
+        "home": 0,
+        "away": 0
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1006006,
+      "referee": "Rodrigo José Pereira de Lima",
+      "timezone": "UTC",
+      "date": "2023-11-30T00:30:00+00:00",
+      "timestamp": 1701304200,
+      "periods": {
+        "first": 1701304200,
+        "second": 1701307800
+      },
+      "venue": {
+        "id": 230,
+        "name": "Estádio Major Antônio Couto Pereira",
+        "city": "Curitiba, Paraná"
+      },
+      "status": {
+        "long": "Match Finished",
+        "short": "FT",
+        "elapsed": 90,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 71,
+      "name": "Serie A",
+      "country": "Brazil",
+      "logo": "https://media.api-sports.io/football/leagues/71.png",
+      "flag": "https://media.api-sports.io/flags/br.svg",
+      "season": 2023,
+      "round": "Regular Season - 36",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 147,
+        "name": "Coritiba",
+        "logo": "https://media.api-sports.io/football/teams/147.png",
+        "winner": null
+      },
+      "away": {
+        "id": 120,
+        "name": "Botafogo",
+        "logo": "https://media.api-sports.io/football/teams/120.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": 1,
+      "away": 1
+    },
+    "score": {
+      "halftime": {
+        "home": 0,
+        "away": 0
+      },
+      "fulltime": {
+        "home": 1,
+        "away": 1
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1005990,
+      "referee": "Wilton Pereira Sampaio",
+      "timezone": "UTC",
+      "date": "2023-11-26T19:00:00+00:00",
+      "timestamp": 1701025200,
+      "periods": {
+        "first": 1701025200,
+        "second": 1701028800
+      },
+      "venue": {
+        "id": 218,
+        "name": "Estádio Nilton Santos",
+        "city": "Rio de Janeiro"
+      },
+      "status": {
+        "long": "Match Finished",
+        "short": "FT",
+        "elapsed": 90,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 71,
+      "name": "Serie A",
+      "country": "Brazil",
+      "logo": "https://media.api-sports.io/football/leagues/71.png",
+      "flag": "https://media.api-sports.io/flags/br.svg",
+      "season": 2023,
+      "round": "Regular Season - 35",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 120,
+        "name": "Botafogo",
+        "logo": "https://media.api-sports.io/football/teams/120.png",
+        "winner": null
+      },
+      "away": {
+        "id": 128,
+        "name": "Santos",
+        "logo": "https://media.api-sports.io/football/teams/128.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": 1,
+      "away": 1
+    },
+    "score": {
+      "halftime": {
+        "home": 1,
+        "away": 0
+      },
+      "fulltime": {
+        "home": 1,
+        "away": 1
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1005937,
+      "referee": "Ramon Abatti",
+      "timezone": "UTC",
+      "date": "2023-11-23T22:00:00+00:00",
+      "timestamp": 1700776800,
+      "periods": {
+        "first": 1700776800,
+        "second": 1700780400
+      },
+      "venue": {
+        "id": 225,
+        "name": "Estádio Governador Plácido Aderaldo Castelo",
+        "city": "Fortaleza, Ceará"
+      },
+      "status": {
+        "long": "Match Finished",
+        "short": "FT",
+        "elapsed": 90,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 71,
+      "name": "Serie A",
+      "country": "Brazil",
+      "logo": "https://media.api-sports.io/football/leagues/71.png",
+      "flag": "https://media.api-sports.io/flags/br.svg",
+      "season": 2023,
+      "round": "Regular Season - 29",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 154,
+        "name": "Fortaleza EC",
+        "logo": "https://media.api-sports.io/football/teams/154.png",
+        "winner": null
+      },
+      "away": {
+        "id": 120,
+        "name": "Botafogo",
+        "logo": "https://media.api-sports.io/football/teams/120.png",
+        "winner": null
+      }
+    },
+    "goals": {
+      "home": 2,
+      "away": 2
+    },
+    "score": {
+      "halftime": {
+        "home": 2,
+        "away": 1
+      },
+      "fulltime": {
+        "home": 2,
+        "away": 2
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  }
+]

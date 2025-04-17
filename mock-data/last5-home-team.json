@@ -1,0 +1,352 @@
+[
+  {
+    "fixture": {
+      "id": 1006025,
+      "referee": "Flavio Rodrigues De Souza",
+      "timezone": "UTC",
+      "date": "2023-12-07T00:30:00+00:00",
+      "timestamp": 1701909000,
+      "periods": {
+        "first": 1701909000,
+        "second": 1701912600
+      },
+      "venue": {
+        "id": 244,
+        "name": "Estádio José Pinheiro Borda",
+        "city": "Porto Alegre, Rio Grande do Sul"
+      },
+      "status": {
+        "long": "Match Finished",
+        "short": "FT",
+        "elapsed": 90,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 71,
+      "name": "Serie A",
+      "country": "Brazil",
+      "logo": "https://media.api-sports.io/football/leagues/71.png",
+      "flag": "https://media.api-sports.io/flags/br.svg",
+      "season": 2023,
+      "round": "Regular Season - 38",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 119,
+        "name": "Internacional",
+        "logo": "https://media.api-sports.io/football/teams/119.png",
+        "winner": true
+      },
+      "away": {
+        "id": 120,
+        "name": "Botafogo",
+        "logo": "https://media.api-sports.io/football/teams/120.png",
+        "winner": false
+      }
+    },
+    "goals": {
+      "home": 3,
+      "away": 1
+    },
+    "score": {
+      "halftime": {
+        "home": 1,
+        "away": 0
+      },
+      "fulltime": {
+        "home": 3,
+        "away": 1
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1006012,
+      "referee": "Caio Max Augusto Vieira",
+      "timezone": "UTC",
+      "date": "2023-12-02T21:00:00+00:00",
+      "timestamp": 1701550800,
+      "periods": {
+        "first": 1701550800,
+        "second": 1701554400
+      },
+      "venue": {
+        "id": 11531,
+        "name": "Neo Química Arena",
+        "city": "São Paulo, São Paulo"
+      },
+      "status": {
+        "long": "Match Finished",
+        "short": "FT",
+        "elapsed": 90,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 71,
+      "name": "Serie A",
+      "country": "Brazil",
+      "logo": "https://media.api-sports.io/football/leagues/71.png",
+      "flag": "https://media.api-sports.io/flags/br.svg",
+      "season": 2023,
+      "round": "Regular Season - 37",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 131,
+        "name": "Corinthians",
+        "logo": "https://media.api-sports.io/football/teams/131.png",
+        "winner": false
+      },
+      "away": {
+        "id": 119,
+        "name": "Internacional",
+        "logo": "https://media.api-sports.io/football/teams/119.png",
+        "winner": true
+      }
+    },
+    "goals": {
+      "home": 1,
+      "away": 2
+    },
+    "score": {
+      "halftime": {
+        "home": 0,
+        "away": 1
+      },
+      "fulltime": {
+        "home": 1,
+        "away": 2
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1006008,
+      "referee": "Dyorgines José Padovani Andrade",
+      "timezone": "UTC",
+      "date": "2023-11-29T23:00:00+00:00",
+      "timestamp": 1701298800,
+      "periods": {
+        "first": 1701298800,
+        "second": 1701302400
+      },
+      "venue": {
+        "id": 235,
+        "name": "Arena Pantanal",
+        "city": "Cuiabá, Mato Grosso"
+      },
+      "status": {
+        "long": "Match Finished",
+        "short": "FT",
+        "elapsed": 90,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 71,
+      "name": "Serie A",
+      "country": "Brazil",
+      "logo": "https://media.api-sports.io/football/leagues/71.png",
+      "flag": "https://media.api-sports.io/flags/br.svg",
+      "season": 2023,
+      "round": "Regular Season - 36",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 1193,
+        "name": "Cuiaba",
+        "logo": "https://media.api-sports.io/football/teams/1193.png",
+        "winner": false
+      },
+      "away": {
+        "id": 119,
+        "name": "Internacional",
+        "logo": "https://media.api-sports.io/football/teams/119.png",
+        "winner": true
+      }
+    },
+    "goals": {
+      "home": 0,
+      "away": 2
+    },
+    "score": {
+      "halftime": {
+        "home": 0,
+        "away": 0
+      },
+      "fulltime": {
+        "home": 0,
+        "away": 2
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1005995,
+      "referee": "Felipe Fernandes de Lima",
+      "timezone": "UTC",
+      "date": "2023-11-26T21:30:00+00:00",
+      "timestamp": 1701034200,
+      "periods": {
+        "first": 1701034200,
+        "second": 1701037800
+      },
+      "venue": {
+        "id": 244,
+        "name": "Estádio José Pinheiro Borda",
+        "city": "Porto Alegre, Rio Grande do Sul"
+      },
+      "status": {
+        "long": "Match Finished",
+        "short": "FT",
+        "elapsed": 90,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 71,
+      "name": "Serie A",
+      "country": "Brazil",
+      "logo": "https://media.api-sports.io/football/leagues/71.png",
+      "flag": "https://media.api-sports.io/flags/br.svg",
+      "season": 2023,
+      "round": "Regular Season - 35",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 119,
+        "name": "Internacional",
+        "logo": "https://media.api-sports.io/football/teams/119.png",
+        "winner": true
+      },
+      "away": {
+        "id": 794,
+        "name": "RB Bragantino",
+        "logo": "https://media.api-sports.io/football/teams/794.png",
+        "winner": false
+      }
+    },
+    "goals": {
+      "home": 1,
+      "away": 0
+    },
+    "score": {
+      "halftime": {
+        "home": 1,
+        "away": 0
+      },
+      "fulltime": {
+        "home": 1,
+        "away": 0
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  },
+  {
+    "fixture": {
+      "id": 1005981,
+      "referee": "Paulo Cesar Zanovelli da Silva",
+      "timezone": "UTC",
+      "date": "2023-11-12T00:00:00+00:00",
+      "timestamp": 1699747200,
+      "periods": {
+        "first": 1699747200,
+        "second": 1699750800
+      },
+      "venue": {
+        "id": 255,
+        "name": "Arena Barueri",
+        "city": "Barueri, São Paulo"
+      },
+      "status": {
+        "long": "Match Finished",
+        "short": "FT",
+        "elapsed": 90,
+        "extra": null
+      }
+    },
+    "league": {
+      "id": 71,
+      "name": "Serie A",
+      "country": "Brazil",
+      "logo": "https://media.api-sports.io/football/leagues/71.png",
+      "flag": "https://media.api-sports.io/flags/br.svg",
+      "season": 2023,
+      "round": "Regular Season - 34",
+      "standings": true
+    },
+    "teams": {
+      "home": {
+        "id": 121,
+        "name": "Palmeiras",
+        "logo": "https://media.api-sports.io/football/teams/121.png",
+        "winner": true
+      },
+      "away": {
+        "id": 119,
+        "name": "Internacional",
+        "logo": "https://media.api-sports.io/football/teams/119.png",
+        "winner": false
+      }
+    },
+    "goals": {
+      "home": 3,
+      "away": 0
+    },
+    "score": {
+      "halftime": {
+        "home": 1,
+        "away": 0
+      },
+      "fulltime": {
+        "home": 3,
+        "away": 0
+      },
+      "extratime": {
+        "home": null,
+        "away": null
+      },
+      "penalty": {
+        "home": null,
+        "away": null
+      }
+    }
+  }
+]

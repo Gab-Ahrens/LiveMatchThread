@@ -20,8 +20,36 @@ const HEADERS = {
   "x-rapidapi-host": RAPIDAPI_HOST,
 };
 
+// Mock data paths
+const MOCK_DIR = path.join(__dirname, "../..", "mock-data");
+const MOCK_FILES = {
+  match: path.join(MOCK_DIR, "match-data.json"),
+  lineups: path.join(MOCK_DIR, "lineups-data.json"),
+  events: path.join(MOCK_DIR, "events-data.json"),
+  statistics: path.join(MOCK_DIR, "statistics-data.json"),
+  lastMatchesHome: path.join(MOCK_DIR, "last5-home-team.json"),
+  lastMatchesAway: path.join(MOCK_DIR, "last5-away-team.json"),
+};
+
 async function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Helper function to read mock data
+ */
+function readMockData(filePath: string): any {
+  try {
+    if (!fs.existsSync(filePath)) {
+      console.warn(`⚠️ Mock file not found: ${filePath}`);
+      console.warn('Run "npm run capture-mock-data" to generate mock data');
+      return null;
+    }
+    return JSON.parse(fs.readFileSync(filePath, "utf-8"));
+  } catch (error) {
+    console.error(`❌ Error reading mock data from ${filePath}:`, error);
+    return null;
+  }
 }
 
 /**
@@ -30,9 +58,7 @@ async function wait(ms: number) {
 export async function fetchNextMatch(retries = 3): Promise<any | null> {
   if (USE_MOCK_DATA) {
     console.log("🧪 Using mock data for next match.");
-    const filePath = path.join(__dirname, "../..", "mock-next-match.json");
-    const content = fs.readFileSync(filePath, "utf-8");
-    return JSON.parse(content);
+    return readMockData(MOCK_FILES.match);
   }
 
   console.log(
@@ -80,9 +106,7 @@ export async function fetchNextMatch(retries = 3): Promise<any | null> {
 export async function fetchLineups(fixtureId: number) {
   if (USE_MOCK_DATA) {
     console.log("🧪 Using mock data for lineups.");
-    const filePath = path.join(__dirname, "../..", "mock-lineups.json");
-    const content = fs.readFileSync(filePath, "utf-8");
-    return JSON.parse(content);
+    return readMockData(MOCK_FILES.lineups);
   }
 
   console.log(`📡 Fetching lineups for fixture ID ${fixtureId}...`);
@@ -130,9 +154,17 @@ export async function fetchLineups(fixtureId: number) {
 export async function fetchFinalMatchData(fixtureId: number) {
   if (USE_MOCK_DATA) {
     console.log("🧪 Using mock data for final match info.");
-    const filePath = path.join(__dirname, "../..", "mock-final-match.json");
-    const content = fs.readFileSync(filePath, "utf-8");
-    return JSON.parse(content);
+    const mockMatch = readMockData(MOCK_FILES.match);
+    const mockEvents = readMockData(MOCK_FILES.events);
+    const mockStats = readMockData(MOCK_FILES.statistics);
+
+    return {
+      fixture: mockMatch.fixture,
+      teams: mockMatch.teams,
+      score: mockMatch.score,
+      events: mockEvents,
+      statistics: mockStats,
+    };
   }
 
   console.log(`📡 Fetching final match data for fixture ID ${fixtureId}...`);
@@ -168,8 +200,9 @@ export async function fetchFinalMatchData(fixtureId: number) {
  */
 export async function fetchMatchStatus(fixtureId: number): Promise<string> {
   if (USE_MOCK_DATA) {
-    console.log("🧪 [MOCK] Returning hardcoded match status: 'FT'");
-    return "FT";
+    console.log("🧪 [MOCK] Returning match status from mock data");
+    const mockMatch = readMockData(MOCK_FILES.match);
+    return mockMatch?.fixture?.status?.short || "FT";
   }
 
   console.log(`📡 Checking match status for fixture ID ${fixtureId}...`);
@@ -196,6 +229,19 @@ export async function fetchLast5Matches(
   leagueId: number,
   season: number
 ) {
+  if (USE_MOCK_DATA) {
+    console.log(`🧪 Using mock data for last 5 matches (team ID: ${teamId})`);
+    // Determine if this is the home or away team
+    const mockMatch = readMockData(MOCK_FILES.match);
+    const isHomeTeam = mockMatch.teams.home.id === teamId;
+
+    if (isHomeTeam) {
+      return readMockData(MOCK_FILES.lastMatchesHome);
+    } else {
+      return readMockData(MOCK_FILES.lastMatchesAway);
+    }
+  }
+
   const response = await axios.get(`${API_BASE_URL}/fixtures`, {
     params: {
       team: teamId,
