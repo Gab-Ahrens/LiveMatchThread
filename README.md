@@ -11,7 +11,7 @@ Automated Reddit bot that creates and posts match threads for SC Internacional f
 
 ### ⚽ Match Thread
 - Posted 15 minutes before kickoff
-- Includes: lineups, last 5 match results for both teams, match details
+- Includes: lineups (fetched 1 hour before kickoff), last 5 match results for both teams, match details
 - Title format: `[JOGO] | COMPETIÇÃO | TIME DA CASA X TIME VISITANTE | RODADA`
 
 ### 🏁 Post-Match Thread
@@ -32,10 +32,18 @@ Automated Reddit bot that creates and posts match threads for SC Internacional f
 │   ├── utils/             # Utility functions
 │   └── index.ts           # Main entry point
 ├── scripts/               # Utility scripts
-│   ├── capture-mock-data/ # Tools for capturing API responses as mock data
-│   └── clean-mock-data/   # Tools for cleaning mock data
-└── mock-data/             # Storage for mock API responses
+│   └── captureApiData.ts  # Tool for capturing API responses as mock data
+├── mock-data/             # Storage for mock API responses
+└── data/                  # Local state storage (git-ignored except .gitkeep)
 ```
+
+## Smart Refreshing
+
+The bot implements smart data refreshing:
+- Fetches match data once every 24 hours
+- Persists refresh state between bot restarts
+- Fetches lineups separately, 1 hour before kickoff and again right before posting
+- State data is stored in the `data/` directory (not committed to repository)
 
 ## Development Mode
 
