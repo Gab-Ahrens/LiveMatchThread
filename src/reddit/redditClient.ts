@@ -1,23 +1,34 @@
+/**
+ * Reddit Integration
+ *
+ * Handles posting threads to Reddit
+ */
 import snoowrap from "snoowrap";
-import dotenv from "dotenv";
-import { DRY_RUN } from "./config";
-
-dotenv.config();
+import {
+  DRY_RUN,
+  REDDIT_USER_AGENT,
+  REDDIT_CLIENT_ID,
+  REDDIT_CLIENT_SECRET,
+  REDDIT_USERNAME,
+  REDDIT_PASSWORD,
+  REDDIT_SUBREDDIT,
+} from "../config/appConfig";
 
 const reddit = new snoowrap({
-  userAgent: process.env.REDDIT_USER_AGENT!,
-  clientId: process.env.REDDIT_CLIENT_ID!,
-  clientSecret: process.env.REDDIT_CLIENT_SECRET!,
-  username: process.env.REDDIT_USERNAME!,
-  password: process.env.REDDIT_PASSWORD!,
+  userAgent: REDDIT_USER_AGENT,
+  clientId: REDDIT_CLIENT_ID,
+  clientSecret: REDDIT_CLIENT_SECRET,
+  username: REDDIT_USERNAME,
+  password: REDDIT_PASSWORD,
 });
 
+/**
+ * Posts a new thread to Reddit
+ */
 export async function postMatchThread(title: string, body: string) {
   try {
-    const subredditName = process.env.REDDIT_SUBREDDIT!;
-
     const options = {
-      subredditName,
+      subredditName: REDDIT_SUBREDDIT,
       title,
       text: body,
       suggested_sort: "new",

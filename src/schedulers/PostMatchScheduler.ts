@@ -1,9 +1,9 @@
-import { BaseScheduler } from "../BaseScheduler";
+import { BaseScheduler } from "./BaseScheduler";
 import { DateTime } from "luxon";
-import { postMatchThread } from "../reddit";
-import { DRY_RUN } from "../config";
-import { fetchFinalMatchData, fetchMatchStatus } from "../api";
-import { formatCompetition } from "../format";
+import { postMatchThread } from "../reddit/redditClient";
+import { DRY_RUN } from "../config/appConfig";
+import { fetchFinalMatchData, fetchMatchStatus } from "../api/apiClient";
+import { formatCompetition } from "../formatters/matchFormatters";
 
 export class PostMatchScheduler extends BaseScheduler {
   constructor(match: any) {

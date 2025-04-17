@@ -1,5 +1,13 @@
-import { fetchLast5Matches } from "./api";
+/**
+ * Match Thread Formatters
+ *
+ * Formatting functions for match threads
+ */
+import { fetchLast5Matches } from "../api/apiClient";
 
+/**
+ * Formats the competition name to a standardized format
+ */
 export function formatCompetition(name: string): string {
   if (name.toLowerCase().includes("libertadores")) {
     return "LIBERTADORES";
@@ -13,7 +21,10 @@ export function formatCompetition(name: string): string {
   return name.toUpperCase();
 }
 
-function formatOrdinalRound(round: string): string {
+/**
+ * Formats the round to an ordinal number (e.g., "1ª RODADA")
+ */
+export function formatOrdinalRound(round: string): string {
   const rodadaMatch = round.match(
     /(Regular Season|Temporada Regular)\s*-\s*(\d+)/i
   );
@@ -22,7 +33,10 @@ function formatOrdinalRound(round: string): string {
   return formatRound(round); // fallback to other logic
 }
 
-function formatRound(round: string): string {
+/**
+ * Formats round names for different competition stages
+ */
+export function formatRound(round: string): string {
   // Group Stage
   const groupMatch = round.match(/Group Stage - (\w)/i);
   if (groupMatch) return `GRUPO ${groupMatch[1]}`;
@@ -41,6 +55,9 @@ function formatRound(round: string): string {
     .toUpperCase();
 }
 
+/**
+ * Formats lineup data into a readable format
+ */
 export function formatLineups(lineups: any[]): string {
   if (!lineups || lineups.length === 0)
     return "Escalações indisponíveis no momento.";
@@ -78,6 +95,9 @@ export function formatLineups(lineups: any[]): string {
     .join("\n\n");
 }
 
+/**
+ * Formats the title for match threads
+ */
 export function formatMatchTitle(match: any): string {
   const { teams, league } = match;
   const home = teams.home.name.toUpperCase();
@@ -88,6 +108,9 @@ export function formatMatchTitle(match: any): string {
   return `[JOGO] | ${competition} | ${home} X ${away} | ${round}`;
 }
 
+/**
+ * Formats the last 5 results for a team
+ */
 export function formatLast5Results(matches: any[], teamId: number): string {
   return matches
     .map((match) => {
@@ -108,6 +131,9 @@ export function formatLast5Results(matches: any[], teamId: number): string {
     .join("\n");
 }
 
+/**
+ * Formats the full match thread content
+ */
 export async function formatMatchThread(
   match: any,
   lineups?: any

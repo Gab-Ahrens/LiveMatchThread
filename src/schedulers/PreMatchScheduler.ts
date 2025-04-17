@@ -1,7 +1,8 @@
-import { BaseScheduler } from "../BaseScheduler";
+import { BaseScheduler } from "./BaseScheduler";
 import { DateTime } from "luxon";
-import { postMatchThread } from "../reddit";
-import { DRY_RUN } from "../config";
+import { postMatchThread } from "../reddit/redditClient";
+import { DRY_RUN } from "../config/appConfig";
+import { formatCompetition } from "../formatters/matchFormatters";
 
 export class PreMatchScheduler extends BaseScheduler {
   constructor(match: any) {

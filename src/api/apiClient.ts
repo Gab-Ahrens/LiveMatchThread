@@ -1,7 +1,11 @@
+/**
+ * Football API client
+ *
+ * This module handles all interactions with the football-data API
+ */
 import fs from "fs";
 import path from "path";
 import axios from "axios";
-import dotenv from "dotenv";
 import {
   USE_MOCK_DATA,
   API_BASE_URL,
@@ -9,11 +13,7 @@ import {
   SEASON,
   RAPIDAPI_KEY,
   RAPIDAPI_HOST,
-} from "./config";
-
-dotenv.config();
-
-const USE_MOCK = USE_MOCK_DATA;
+} from "../config/appConfig";
 
 const HEADERS = {
   "x-rapidapi-key": RAPIDAPI_KEY,
@@ -24,10 +24,13 @@ async function wait(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Fetches the next upcoming match for SC Internacional
+ */
 export async function fetchNextMatch(retries = 3): Promise<any | null> {
-  if (USE_MOCK) {
+  if (USE_MOCK_DATA) {
     console.log("🧪 Using mock data for next match.");
-    const filePath = path.join(__dirname, "..", "mock-next-match.json");
+    const filePath = path.join(__dirname, "../..", "mock-next-match.json");
     const content = fs.readFileSync(filePath, "utf-8");
     return JSON.parse(content);
   }
@@ -71,28 +74,63 @@ export async function fetchNextMatch(retries = 3): Promise<any | null> {
   return null;
 }
 
+/**
+ * Fetches lineups for a specific match
+ */
 export async function fetchLineups(fixtureId: number) {
-  if (USE_MOCK) {
+  if (USE_MOCK_DATA) {
     console.log("🧪 Using mock data for lineups.");
-    const filePath = path.join(__dirname, "..", "mock-lineups.json");
+    const filePath = path.join(__dirname, "../..", "mock-lineups.json");
     const content = fs.readFileSync(filePath, "utf-8");
     return JSON.parse(content);
   }
 
   console.log(`📡 Fetching lineups for fixture ID ${fixtureId}...`);
 
-  const response = await axios.get(`${API_BASE_URL}/fixtures/lineups`, {
-    params: { fixture: fixtureId },
-    headers: HEADERS,
-  });
+  try {
+    const response = await axios.get(`${API_BASE_URL}/fixtures/lineups`, {
+      params: { fixture: fixtureId },
+      headers: HEADERS,
+    });
 
-  return response.data.response;
+    const lineups = response.data.response;
+
+    if (!lineups || !Array.isArray(lineups)) {
+      console.error("❌ API returned invalid lineups data: Not an array");
+      console.log(
+        "API Response:",
+        JSON.stringify(response.data, null, 2).slice(0, 500) + "..."
+      );
+      return [];
+    }
+
+    if (lineups.length === 0) {
+      console.warn("⚠️ API returned empty lineups array");
+      return [];
+    }
+
+    console.log(`✅ Received lineup data for ${lineups.length} teams`);
+    return lineups;
+  } catch (error: any) {
+    console.error("❌ Error fetching lineups:", error.message);
+    if (error.response) {
+      console.error(
+        "Response data:",
+        JSON.stringify(error.response.data, null, 2).slice(0, 500) + "..."
+      );
+      console.error("Response status:", error.response.status);
+    }
+    throw error;
+  }
 }
 
+/**
+ * Fetches complete match data after the match has concluded
+ */
 export async function fetchFinalMatchData(fixtureId: number) {
-  if (USE_MOCK) {
+  if (USE_MOCK_DATA) {
     console.log("🧪 Using mock data for final match info.");
-    const filePath = path.join(__dirname, "..", "mock-final-match.json");
+    const filePath = path.join(__dirname, "../..", "mock-final-match.json");
     const content = fs.readFileSync(filePath, "utf-8");
     return JSON.parse(content);
   }
@@ -125,8 +163,11 @@ export async function fetchFinalMatchData(fixtureId: number) {
   };
 }
 
+/**
+ * Checks the current status of a match
+ */
 export async function fetchMatchStatus(fixtureId: number): Promise<string> {
-  if (USE_MOCK) {
+  if (USE_MOCK_DATA) {
     console.log("🧪 [MOCK] Returning hardcoded match status: 'FT'");
     return "FT";
   }
@@ -147,6 +188,9 @@ export async function fetchMatchStatus(fixtureId: number): Promise<string> {
   }
 }
 
+/**
+ * Fetches the last 5 matches for a team in a specific league
+ */
 export async function fetchLast5Matches(
   teamId: number,
   leagueId: number,

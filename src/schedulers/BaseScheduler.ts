@@ -1,6 +1,6 @@
 import { DateTime } from "luxon";
-import { isThreadPosted, markThreadPosted } from "./threadState";
-import { DRY_RUN } from "./config";
+import { isThreadPosted, markThreadPosted } from "../utils/threadState";
+import { DRY_RUN } from "../config/appConfig";
 
 export abstract class BaseScheduler {
   protected match: any;

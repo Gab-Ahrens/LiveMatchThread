@@ -1,9 +1,12 @@
-import { BaseScheduler } from "../BaseScheduler";
+import { BaseScheduler } from "./BaseScheduler";
 import { DateTime } from "luxon";
-import { postMatchThread } from "../reddit";
-import { DRY_RUN, USE_MOCK_DATA } from "../config";
-import { fetchLineups } from "../api";
-import { formatMatchThread, formatMatchTitle } from "../format";
+import { postMatchThread } from "../reddit/redditClient";
+import { DRY_RUN, USE_MOCK_DATA } from "../config/appConfig";
+import { fetchLineups } from "../api/apiClient";
+import {
+  formatMatchThread,
+  formatMatchTitle,
+} from "../formatters/matchFormatters";
 
 export class MatchThreadScheduler extends BaseScheduler {
   private scheduledMatchId: number | null = null;
