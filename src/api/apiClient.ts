@@ -15,12 +15,19 @@ import {
   RAPIDAPI_HOST,
 } from "../config/appConfig";
 
-const HEADERS = {
-  "x-rapidapi-key": RAPIDAPI_KEY,
-  "x-rapidapi-host": RAPIDAPI_HOST,
-};
+// For Workers environment, we'll need to get the API key from environment
+function getHeaders(env?: any) {
+  // If running in Workers environment, use env variable
+  const apiKey = env?.RAPIDAPI_KEY || RAPIDAPI_KEY;
+  const apiHost = env?.RAPIDAPI_HOST || RAPIDAPI_HOST;
 
-// Mock data paths
+  return {
+    "x-rapidapi-key": apiKey,
+    "x-rapidapi-host": apiHost,
+  };
+}
+
+// Mock data paths for local development
 const MOCK_DIR = path.join(__dirname, "../..", "mock-data");
 const MOCK_FILES = {
   match: path.join(MOCK_DIR, "match-data.json"),
@@ -36,30 +43,69 @@ async function wait(ms: number) {
 }
 
 /**
- * Helper function to read mock data
+ * Helper function to read mock data - works in both Node.js and Workers
  */
 function readMockData(filePath: string): any {
-  try {
-    if (!fs.existsSync(filePath)) {
-      console.warn(`⚠️ Mock file not found: ${filePath}`);
-      console.warn('Run "npm run capture-mock-data" to generate mock data');
+  // In Node.js environment
+  if (typeof process !== "undefined" && fs.existsSync) {
+    try {
+      if (!fs.existsSync(filePath)) {
+        console.warn(`⚠️ Mock file not found: ${filePath}`);
+        console.warn('Run "npm run capture-mock-data" to generate mock data');
+        return null;
+      }
+      return JSON.parse(fs.readFileSync(filePath, "utf-8"));
+    } catch (error) {
+      console.error(`❌ Error reading mock data from ${filePath}:`, error);
       return null;
     }
-    return JSON.parse(fs.readFileSync(filePath, "utf-8"));
-  } catch (error) {
-    console.error(`❌ Error reading mock data from ${filePath}:`, error);
-    return null;
   }
+
+  // In Workers environment - we don't have access to mock files
+  // Return hardcoded mock data for essential testing
+  console.warn("⚠️ Mock data not available in Workers environment");
+
+  // Return a simple mock match object
+  const mockMatch = {
+    fixture: {
+      id: 12345,
+      date: "2023-12-07T00:30:00+00:00",
+      venue: { name: "Estádio Beira-Rio", city: "Porto Alegre" },
+      status: { short: "NS" },
+    },
+    league: {
+      name: "Campeonato Brasileiro Série A",
+      round: "Regular Season - 34",
+    },
+    teams: {
+      home: { id: 126, name: "Internacional" },
+      away: { id: 127, name: "Botafogo" },
+    },
+    score: {
+      fulltime: { home: 2, away: 1 },
+    },
+  };
+
+  // Return appropriate mock data based on which mock was requested
+  if (filePath.includes("match-data")) return mockMatch;
+  if (filePath.includes("lineups")) return [];
+  if (filePath.includes("events")) return [];
+  if (filePath.includes("statistics")) return [];
+  if (filePath.includes("last5")) return [];
+
+  return null;
 }
 
 /**
  * Fetches the next upcoming match for SC Internacional
  * @param forceFresh If true, forces a fresh API call regardless of mock data setting
  * @param retries Number of retry attempts for API calls
+ * @param env Cloudflare Worker environment (optional)
  */
 export async function fetchNextMatch(
   forceFresh = true,
-  retries = 3
+  retries = 3,
+  env?: any
 ): Promise<any | null> {
   if (USE_MOCK_DATA && !forceFresh) {
     console.log("🧪 Using mock data for next match.");
@@ -70,15 +116,19 @@ export async function fetchNextMatch(
     "🌐 [LIVE] Making API call to fetch next SC Internacional match..."
   );
 
+  // Get team ID from environment if available
+  const teamId = env?.TEAM_ID || TEAM_ID;
+  const season = env?.SEASON || SEASON;
+
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const response = await axios.get(`${API_BASE_URL}/fixtures`, {
         params: {
-          team: TEAM_ID,
-          season: SEASON,
+          team: teamId,
+          season: season,
           next: 1,
         },
-        headers: HEADERS,
+        headers: getHeaders(env),
       });
 
       const data = response.data.response[0];
@@ -108,7 +158,7 @@ export async function fetchNextMatch(
 /**
  * Fetches lineups for a specific match
  */
-export async function fetchLineups(fixtureId: number) {
+export async function fetchLineups(fixtureId: number, env?: any) {
   if (USE_MOCK_DATA) {
     console.log("🧪 Using mock data for lineups.");
     return readMockData(MOCK_FILES.lineups);
@@ -119,7 +169,7 @@ export async function fetchLineups(fixtureId: number) {
   try {
     const response = await axios.get(`${API_BASE_URL}/fixtures/lineups`, {
       params: { fixture: fixtureId },
-      headers: HEADERS,
+      headers: getHeaders(env),
     });
 
     const lineups = response.data.response;
@@ -156,7 +206,7 @@ export async function fetchLineups(fixtureId: number) {
 /**
  * Fetches complete match data after the match has concluded
  */
-export async function fetchFinalMatchData(fixtureId: number) {
+export async function fetchFinalMatchData(fixtureId: number, env?: any) {
   if (USE_MOCK_DATA) {
     console.log("🧪 Using mock data for final match info.");
     const mockMatch = readMockData(MOCK_FILES.match);
@@ -177,15 +227,15 @@ export async function fetchFinalMatchData(fixtureId: number) {
   const [fixtureRes, eventsRes, statsRes] = await Promise.all([
     axios.get(`${API_BASE_URL}/fixtures`, {
       params: { id: fixtureId },
-      headers: HEADERS,
+      headers: getHeaders(env),
     }),
     axios.get(`${API_BASE_URL}/fixtures/events`, {
       params: { fixture: fixtureId },
-      headers: HEADERS,
+      headers: getHeaders(env),
     }),
     axios.get(`${API_BASE_URL}/fixtures/statistics`, {
       params: { fixture: fixtureId },
-      headers: HEADERS,
+      headers: getHeaders(env),
     }),
   ]);
 
@@ -203,7 +253,10 @@ export async function fetchFinalMatchData(fixtureId: number) {
 /**
  * Checks the current status of a match
  */
-export async function fetchMatchStatus(fixtureId: number): Promise<string> {
+export async function fetchMatchStatus(
+  fixtureId: number,
+  env?: any
+): Promise<string> {
   if (USE_MOCK_DATA) {
     console.log("🧪 [MOCK] Returning match status from mock data");
     const mockMatch = readMockData(MOCK_FILES.match);
@@ -215,7 +268,7 @@ export async function fetchMatchStatus(fixtureId: number): Promise<string> {
   try {
     const response = await axios.get(`${API_BASE_URL}/fixtures`, {
       params: { id: fixtureId },
-      headers: HEADERS,
+      headers: getHeaders(env),
     });
 
     const data = response.data.response[0];
@@ -232,7 +285,8 @@ export async function fetchMatchStatus(fixtureId: number): Promise<string> {
 export async function fetchLast5Matches(
   teamId: number,
   leagueId: number,
-  season: number
+  season: number,
+  env?: any
 ) {
   if (USE_MOCK_DATA) {
     console.log(`🧪 Using mock data for last 5 matches (team ID: ${teamId})`);
@@ -254,7 +308,7 @@ export async function fetchLast5Matches(
       season: season,
       last: 5,
     },
-    headers: HEADERS,
+    headers: getHeaders(env),
   });
   return response.data.response;
 }

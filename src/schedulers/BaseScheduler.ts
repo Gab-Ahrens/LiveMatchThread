@@ -1,5 +1,12 @@
 import { DateTime } from "luxon";
-import { isThreadPosted, markThreadPosted } from "../utils/threadState";
+import {
+  isThreadPosted as fileIsThreadPosted,
+  markThreadPosted as fileMarkThreadPosted,
+} from "../utils/threadState";
+import {
+  isThreadPosted as kvIsThreadPosted,
+  markThreadPosted as kvMarkThreadPosted,
+} from "../utils/kvThreadState";
 import { DRY_RUN } from "../config/appConfig";
 
 export abstract class BaseScheduler {
@@ -8,13 +15,16 @@ export abstract class BaseScheduler {
     | "preMatchPosted"
     | "matchThreadPosted"
     | "postMatchPosted";
+  protected env: any;
 
   constructor(
     match: any,
-    threadType: "preMatchPosted" | "matchThreadPosted" | "postMatchPosted"
+    threadType: "preMatchPosted" | "matchThreadPosted" | "postMatchPosted",
+    env?: any
   ) {
     this.match = match;
     this.threadType = threadType;
+    this.env = env;
   }
 
   /**
@@ -25,7 +35,7 @@ export abstract class BaseScheduler {
     await this.previewThreadContent();
 
     // Check if already posted
-    if (isThreadPosted(this.match.fixture.id, this.threadType)) {
+    if (await this.isThreadPosted()) {
       console.log(`⏭️ ${this.getThreadTypeName()} already posted, skipping.`);
       return;
     }
@@ -58,8 +68,35 @@ export abstract class BaseScheduler {
   /**
    * Marks the thread as posted
    */
-  protected markAsPosted(): void {
-    markThreadPosted(this.match.fixture.id, this.threadType);
+  protected async markAsPosted(): Promise<void> {
+    if (this.env) {
+      // Cloudflare Worker environment
+      await kvMarkThreadPosted(
+        this.match.fixture.id,
+        this.threadType,
+        this.env
+      );
+    } else {
+      // Node.js environment
+      fileMarkThreadPosted(this.match.fixture.id, this.threadType);
+    }
+  }
+
+  /**
+   * Checks if the thread is already posted
+   */
+  protected async isThreadPosted(): Promise<boolean> {
+    if (this.env) {
+      // Cloudflare Worker environment
+      return await kvIsThreadPosted(
+        this.match.fixture.id,
+        this.threadType,
+        this.env
+      );
+    } else {
+      // Node.js environment
+      return fileIsThreadPosted(this.match.fixture.id, this.threadType);
+    }
   }
 
   /**
@@ -68,7 +105,7 @@ export abstract class BaseScheduler {
    */
   async shouldPostNow(): Promise<boolean> {
     // If already posted, don't post again
-    if (isThreadPosted(this.match.fixture.id, this.threadType)) {
+    if (await this.isThreadPosted()) {
       return false;
     }
 

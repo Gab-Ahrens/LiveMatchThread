@@ -17,8 +17,8 @@ export class MatchThreadScheduler extends BaseScheduler {
   private body: string = "";
   private lineupCachePath: string;
 
-  constructor(match: any) {
-    super(match, "matchThreadPosted");
+  constructor(match: any, env?: any) {
+    super(match, "matchThreadPosted", env);
     // Set path for lineup cache
     this.lineupCachePath = path.join(
       __dirname,
@@ -290,7 +290,7 @@ export class MatchThreadScheduler extends BaseScheduler {
       console.log("🚧 [DRY RUN] Match thread would be posted to Reddit");
     } else {
       console.log("🚀 Posting match thread!");
-      await postMatchThread(title, body);
+      await postMatchThread(title, body, this.env);
     }
   }
 }

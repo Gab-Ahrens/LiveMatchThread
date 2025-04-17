@@ -5,8 +5,8 @@ import { DRY_RUN } from "../config/appConfig";
 import { formatCompetition } from "../formatters/matchFormatters";
 
 export class PreMatchScheduler extends BaseScheduler {
-  constructor(match: any) {
-    super(match, "preMatchPosted");
+  constructor(match: any, env?: any) {
+    super(match, "preMatchPosted", env);
   }
 
   // Generate thread content
@@ -88,7 +88,7 @@ export class PreMatchScheduler extends BaseScheduler {
     await this.postThread(threadContent.title, threadContent.body);
 
     // Mark as posted
-    this.markAsPosted();
+    await this.markAsPosted();
   }
 
   private async postThread(title: string, body: string) {
@@ -97,7 +97,7 @@ export class PreMatchScheduler extends BaseScheduler {
       console.log("🚧 [DRY RUN] Pre-match thread would be posted to Reddit");
     } else {
       console.log("🚀 Posting pre-match thread!");
-      await postMatchThread(title, body);
+      await postMatchThread(title, body, this.env);
     }
   }
 

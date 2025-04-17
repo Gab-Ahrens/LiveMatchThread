@@ -1,51 +1,78 @@
 /**
- * Reddit Integration
+ * Reddit API Client
  *
- * Handles posting threads to Reddit
+ * Handles posting threads to Reddit using snoowrap
  */
 import snoowrap from "snoowrap";
 import {
-  DRY_RUN,
   REDDIT_USER_AGENT,
   REDDIT_CLIENT_ID,
   REDDIT_CLIENT_SECRET,
   REDDIT_USERNAME,
   REDDIT_PASSWORD,
   REDDIT_SUBREDDIT,
+  DRY_RUN,
 } from "../config/appConfig";
 
-const reddit = new snoowrap({
-  userAgent: REDDIT_USER_AGENT,
-  clientId: REDDIT_CLIENT_ID,
-  clientSecret: REDDIT_CLIENT_SECRET,
-  username: REDDIT_USERNAME,
-  password: REDDIT_PASSWORD,
-});
+// Get Reddit credentials from environment
+function getCredentials(env?: any) {
+  return {
+    userAgent: env?.REDDIT_USER_AGENT || REDDIT_USER_AGENT,
+    clientId: env?.REDDIT_CLIENT_ID || REDDIT_CLIENT_ID,
+    clientSecret: env?.REDDIT_CLIENT_SECRET || REDDIT_CLIENT_SECRET,
+    username: env?.REDDIT_USERNAME || REDDIT_USERNAME,
+    password: env?.REDDIT_PASSWORD || REDDIT_PASSWORD,
+    subreddit: env?.REDDIT_SUBREDDIT || REDDIT_SUBREDDIT,
+  };
+}
 
 /**
- * Posts a new thread to Reddit
+ * Creates a Reddit API client
  */
-export async function postMatchThread(title: string, body: string) {
+function createRedditClient(env?: any) {
+  const credentials = getCredentials(env);
+
+  return new snoowrap({
+    userAgent: credentials.userAgent,
+    clientId: credentials.clientId,
+    clientSecret: credentials.clientSecret,
+    username: credentials.username,
+    password: credentials.password,
+  });
+}
+
+/**
+ * Post a match thread to Reddit
+ */
+export async function postMatchThread(
+  title: string,
+  body: string,
+  env?: any
+): Promise<void> {
+  if (DRY_RUN) {
+    console.log(
+      `🚧 [DRY RUN] Would post to r/${REDDIT_SUBREDDIT} with title: ${title}`
+    );
+    return;
+  }
+
   try {
-    const options = {
-      subredditName: REDDIT_SUBREDDIT,
-      title,
-      text: body,
-      suggested_sort: "new",
-    };
+    const credentials = getCredentials(env);
+    const reddit = createRedditClient(env);
 
-    if (DRY_RUN) {
-      console.log(
-        "🚧 [DRY_RUN MODE] Not posting to Reddit. Here's what would've been posted:"
-      );
-      console.log("Title:", title);
-      console.log("Body:", body);
-      return;
-    }
+    console.log(`🔄 Submitting thread to r/${credentials.subreddit}...`);
 
-    const submission = await (reddit as any).submitSelfpost(options);
-    console.log(`✅ Match thread posted: ${submission.url}`);
+    // Submit the post
+    const submission = await reddit
+      .getSubreddit(credentials.subreddit)
+      .submitSelfpost({
+        title,
+        text: body,
+        sendReplies: false,
+      });
+
+    console.log(`✅ Thread posted successfully! URL: ${submission.url}`);
   } catch (error) {
-    console.error("❌ Failed to post match thread:", error);
+    console.error("❌ Failed to post to Reddit:", error);
   }
 }

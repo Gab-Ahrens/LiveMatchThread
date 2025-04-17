@@ -9,8 +9,8 @@ import { isThreadPosted } from "../utils/threadState";
 export class PostMatchScheduler extends BaseScheduler {
   private finalData: any = null;
 
-  constructor(match: any) {
-    super(match, "postMatchPosted");
+  constructor(match: any, env?: any) {
+    super(match, "postMatchPosted", env);
   }
 
   /**
@@ -130,8 +130,8 @@ export class PostMatchScheduler extends BaseScheduler {
       console.log("🚧 [DRY RUN] Post-match thread would be posted to Reddit");
     } else {
       console.log("🚀 Posting post-match thread!");
-      await postMatchThread(title, body);
-      this.markAsPosted();
+      await postMatchThread(title, body, this.env);
+      await this.markAsPosted();
     }
   }
 
