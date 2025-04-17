@@ -7,15 +7,143 @@ import {
   formatMatchThread,
   formatMatchTitle,
 } from "../formatters/matchFormatters";
+import fs from "fs";
+import path from "path";
 
 export class MatchThreadScheduler extends BaseScheduler {
   private scheduledMatchId: number | null = null;
   private lineups: any = null;
   private title: string = "";
   private body: string = "";
+  private lineupCachePath: string;
 
   constructor(match: any) {
     super(match, "matchThreadPosted");
+    // Set path for lineup cache
+    this.lineupCachePath = path.join(
+      __dirname,
+      "../../data",
+      `lineups-${match.fixture.id}.json`
+    );
+    // Try to load cached lineups
+    this.loadCachedLineups();
+  }
+
+  /**
+   * Gets the scheduled time when this thread should be posted
+   * For match thread: 15 minutes before kickoff
+   */
+  getScheduledPostTime(): DateTime | null {
+    const matchDateUTC = DateTime.fromISO(this.match.fixture.date, {
+      zone: "utc",
+    });
+    return matchDateUTC.minus({ minutes: 15 });
+  }
+
+  /**
+   * Gets the time when lineups should be fetched
+   * 1 hour before kickoff
+   */
+  getLineupFetchTime(): DateTime | null {
+    const matchDateUTC = DateTime.fromISO(this.match.fixture.date, {
+      zone: "utc",
+    });
+    return matchDateUTC.minus({ minutes: 60 });
+  }
+
+  /**
+   * Check if it's time to fetch lineups
+   */
+  async shouldFetchLineupsNow(): Promise<boolean> {
+    // If already posted, no need to fetch lineups
+    if (this.isMatchThreadPosted()) {
+      return false;
+    }
+
+    // If we already have lineups, no need to fetch again
+    if (this.lineups && this.lineups.length > 0) {
+      return false;
+    }
+
+    // Get lineup fetch time
+    const fetchTime = this.getLineupFetchTime();
+    if (!fetchTime) {
+      return false;
+    }
+
+    // Check if we're within the lineup fetch window (from 65 min before to 5 min before match)
+    const now = DateTime.now().setZone("utc");
+    const matchTime = DateTime.fromISO(this.match.fixture.date, {
+      zone: "utc",
+    });
+
+    return now >= fetchTime && now <= matchTime.minus({ minutes: 5 });
+  }
+
+  /**
+   * Fetches and caches lineups for later use
+   */
+  async fetchAndCacheLineups(): Promise<void> {
+    const matchId = this.match.fixture.id;
+    console.log("📋 Fetching lineups for match...");
+
+    this.lineups = await this.fetchLineupsWithRetry(matchId);
+
+    if (this.lineups && this.lineups.length > 0) {
+      console.log("✅ Successfully fetched lineups, caching for later use");
+      this.cacheLineups();
+    } else {
+      console.log(
+        "⚠️ Could not fetch lineups at this time, will try again later"
+      );
+    }
+  }
+
+  /**
+   * Cache the lineups to disk for persistence between job runs
+   */
+  private cacheLineups(): void {
+    try {
+      // Ensure directory exists
+      const dir = path.dirname(this.lineupCachePath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+
+      fs.writeFileSync(
+        this.lineupCachePath,
+        JSON.stringify(this.lineups, null, 2)
+      );
+    } catch (err) {
+      console.error("❌ Failed to cache lineups:", err);
+    }
+  }
+
+  /**
+   * Load cached lineups from disk
+   */
+  private loadCachedLineups(): void {
+    try {
+      if (fs.existsSync(this.lineupCachePath)) {
+        const data = fs.readFileSync(this.lineupCachePath, "utf8");
+        this.lineups = JSON.parse(data);
+        console.log("ℹ️ Loaded cached lineups from previous run");
+      }
+    } catch (err) {
+      console.warn("⚠️ Failed to load cached lineups:", err);
+    }
+  }
+
+  /**
+   * Check if the match thread has already been posted
+   */
+  private isMatchThreadPosted(): boolean {
+    return (
+      this.match &&
+      this.match.fixture &&
+      this.match.fixture.id !== undefined &&
+      this.scheduledMatchId === this.match.fixture.id
+    );
   }
 
   // Preview the thread content
@@ -25,7 +153,9 @@ export class MatchThreadScheduler extends BaseScheduler {
 
     // For preview, we'll try to get lineups, but it's okay if they're not available yet
     try {
-      this.lineups = await this.fetchLineupsWithRetry(this.match.fixture.id);
+      if (!this.lineups || this.lineups.length === 0) {
+        this.lineups = await this.fetchLineupsWithRetry(this.match.fixture.id);
+      }
       console.log(
         this.lineups && this.lineups.length > 0
           ? "✅ Lineups available for preview"
@@ -46,13 +176,10 @@ export class MatchThreadScheduler extends BaseScheduler {
     console.log(`Body:\n${this.body}\n`);
 
     // Calculate posting time
-    const matchDateUTC = DateTime.fromISO(this.match.fixture.date, {
-      zone: "utc",
-    });
-    const postTimeUTC = matchDateUTC.minus({ minutes: 15 });
+    const postTimeUTC = this.getScheduledPostTime();
 
     console.log(
-      `🕒 Would be posted at: ${postTimeUTC.toFormat(
+      `🕒 Would be posted at: ${postTimeUTC?.toFormat(
         "cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm:ss"
       )} (UTC) ${DRY_RUN ? "[DRY RUN 🚧]" : "[LIVE MODE 🚀]"}`
     );
@@ -63,10 +190,7 @@ export class MatchThreadScheduler extends BaseScheduler {
     const matchId = this.match.fixture.id;
 
     // Calculate posting time
-    const matchDateUTC = DateTime.fromISO(this.match.fixture.date, {
-      zone: "utc",
-    });
-    const postTimeUTC = matchDateUTC.minus({ minutes: 15 });
+    const postTimeUTC = this.getScheduledPostTime();
 
     // Don't schedule if already scheduled
     if (this.scheduledMatchId === matchId) {
@@ -74,55 +198,44 @@ export class MatchThreadScheduler extends BaseScheduler {
       return;
     }
 
-    // Wait until 1 hour before match to attempt to fetch lineups
-    const lineupsAttemptTime = matchDateUTC.minus({ minutes: 60 });
-
-    // First, wait until time to fetch lineups
-    if (DateTime.now() < lineupsAttemptTime) {
-      console.log("⏳ Waiting until 1 hour before kickoff to fetch lineups...");
-      console.log(
-        `Will attempt to fetch lineups at: ${lineupsAttemptTime.toFormat(
-          "cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm:ss"
-        )} (UTC)`
-      );
-
-      await this.waitUntil(lineupsAttemptTime);
+    // In job mode, if we're not within the posting window, don't wait
+    // The scheduler will call us again at the appropriate time
+    if (!postTimeUTC || DateTime.now().plus({ minutes: 5 }) < postTimeUTC) {
+      console.log("⏳ Not yet time to post match thread");
+      return;
     }
 
-    // Now try to get lineups
-    console.log(
-      "🔄 Attempting to fetch latest lineups (1 hour before kickoff)..."
-    );
-    this.lineups = await this.fetchLineupsWithRetry(matchId);
+    // If we don't have lineups yet, try one final time
+    if (!this.lineups || this.lineups.length === 0) {
+      console.log(
+        "🔄 Final attempt to fetch lineups before posting match thread..."
+      );
+      this.lineups = await this.fetchLineupsWithRetry(matchId);
+    }
 
-    // Generate content with the freshly fetched lineups
+    // Generate content with the latest lineup data
     this.title = formatMatchTitle(this.match);
     this.body = await formatMatchThread(this.match, this.lineups);
-
-    // Wait until posting time
-    await this.waitUntil(postTimeUTC);
-
-    // One final attempt to get or update lineups right before posting
-    // (Some lineups might be released very close to kickoff)
-    console.log(
-      "🔄 Final attempt to fetch or update lineups before posting..."
-    );
-    const finalLineups = await this.fetchLineupsWithRetry(matchId);
-
-    // If we got new lineups in the final attempt, update the body
-    if (
-      finalLineups &&
-      finalLineups.length > 0 &&
-      (!this.lineups || this.lineups.length === 0)
-    ) {
-      console.log("✅ Got lineups in final attempt, updating thread content");
-      this.lineups = finalLineups;
-      this.body = await formatMatchThread(this.match, this.lineups);
-    }
 
     // Post thread
     await this.postThread(this.title, this.body);
     this.markAsPosted();
+
+    // Clean up cached lineups after posting
+    this.cleanupCachedLineups();
+  }
+
+  /**
+   * Clean up cached lineups file after posting
+   */
+  private cleanupCachedLineups(): void {
+    try {
+      if (fs.existsSync(this.lineupCachePath)) {
+        fs.unlinkSync(this.lineupCachePath);
+      }
+    } catch (err) {
+      console.warn("⚠️ Failed to clean up cached lineups:", err);
+    }
   }
 
   private async fetchLineupsWithRetry(matchId: number): Promise<any> {

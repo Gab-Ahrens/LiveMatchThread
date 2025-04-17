@@ -54,9 +54,14 @@ function readMockData(filePath: string): any {
 
 /**
  * Fetches the next upcoming match for SC Internacional
+ * @param forceFresh If true, forces a fresh API call regardless of mock data setting
+ * @param retries Number of retry attempts for API calls
  */
-export async function fetchNextMatch(retries = 3): Promise<any | null> {
-  if (USE_MOCK_DATA) {
+export async function fetchNextMatch(
+  forceFresh = true,
+  retries = 3
+): Promise<any | null> {
+  if (USE_MOCK_DATA && !forceFresh) {
     console.log("🧪 Using mock data for next match.");
     return readMockData(MOCK_FILES.match);
   }

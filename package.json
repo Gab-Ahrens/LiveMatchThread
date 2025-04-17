@@ -5,8 +5,12 @@
   "scripts": {
     "dev": "ts-node src/index.ts",
     "dev:mock": "cross-env DRY_RUN=true USE_MOCK_DATA=true ts-node src/index.ts",
+    "dev:dry": "cross-env DRY_RUN=true ts-node src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "job": "node dist/index.js",
+    "job:dry": "cross-env DRY_RUN=true node dist/index.js",
+    "job:mock": "cross-env DRY_RUN=true USE_MOCK_DATA=true node dist/index.js",
     "capture-mock-data": "ts-node scripts/captureApiData.ts",
     "clean-mock-data": "rimraf mock-data/*"
   },

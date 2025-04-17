@@ -37,6 +37,59 @@ Automated Reddit bot that creates and posts match threads for SC Internacional f
 └── data/                  # Local state storage (git-ignored except .gitkeep)
 ```
 
+## Hosting Options
+
+The bot can run in two modes:
+
+### 1. Continuous Mode (Legacy)
+- Runs as a continuous process
+- Internally schedules all thread creation
+- Requires a persistent hosting environment
+
+### 2. Job Mode (Recommended for free hosting)
+- Runs as a scheduled job that starts, checks for needed actions, and exits
+- Perfect for free hosting platforms with execution time limits
+- Can be scheduled with:
+  - Cron jobs (Linux/Unix)
+  - Task Scheduler (Windows)
+  - GitHub Actions
+  - Free scheduler services (cron-job.org, etc.)
+
+## Setting Up Scheduled Execution
+
+For best results with free hosting, schedule the job to run every 15-30 minutes:
+
+### GitHub Actions Example
+```yaml
+name: Run Match Thread Bot
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'  # Every 15 minutes
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '18'
+      - run: npm ci
+      - run: npm run build
+      - run: npm run job
+        env:
+          # Set all your environment variables here
+          FOOTBALL_API_KEY: ${{ secrets.FOOTBALL_API_KEY }}
+          REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+          # ...other env vars
+```
+
+### External Scheduler Service
+1. Deploy your app to a service like Render, Netlify, or Vercel
+2. Create an endpoint that triggers the bot job
+3. Use a service like cron-job.org to hit that endpoint every 15-30 minutes
+
 ## Smart Refreshing
 
 The bot implements smart data refreshing:
@@ -66,15 +119,20 @@ The bot includes tools for working with mock data to facilitate development:
 # Install dependencies
 npm install
 
-# Run in development mode with mock data (previews only)
-npm run dev:mock
+# Development - Continuous Mode
+npm run dev:mock    # Mock data + no posting
+npm run dev:dry     # Real API + no posting
+npm run dev         # Real API + real posting
 
-# Run in development mode with live API data (previews only)
-npm run dev:dry
-
-# Run in production mode (posts to Reddit)
+# Production - Continuous Mode
 npm run build
 npm start
+
+# Job Mode (for scheduled execution)
+npm run build
+npm run job         # Real API + real posting
+npm run job:dry     # Real API + no posting
+npm run job:mock    # Mock data + no posting
 ```
 
 ## Configuration
@@ -94,8 +152,8 @@ REDDIT_USER_AGENT=your_user_agent
 REDDIT_SUBREDDIT=target_subreddit
 
 # Runtime Flags
-DRY_RUN=true
-USE_MOCK_DATA=true
+DRY_RUN=true        # Set to false in production
+USE_MOCK_DATA=true  # Set to false in production
 ```
 
 ## License

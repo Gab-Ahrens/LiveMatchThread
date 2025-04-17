@@ -4,12 +4,73 @@ import { postMatchThread } from "../reddit/redditClient";
 import { DRY_RUN, USE_MOCK_DATA } from "../config/appConfig";
 import { fetchFinalMatchData, fetchMatchStatus } from "../api/apiClient";
 import { formatCompetition } from "../formatters/matchFormatters";
+import { isThreadPosted } from "../utils/threadState";
 
 export class PostMatchScheduler extends BaseScheduler {
   private finalData: any = null;
 
   constructor(match: any) {
     super(match, "postMatchPosted");
+  }
+
+  /**
+   * Gets the scheduled time when this thread should be posted
+   * For post-match thread: This is not fixed, depends on when match ends
+   * Returns null since post time depends on match status
+   */
+  getScheduledPostTime(): DateTime | null {
+    return null; // Post-match thread doesn't have a fixed schedule
+  }
+
+  /**
+   * Gets the estimated end time of the match (2 hours after kickoff)
+   */
+  getEstimatedEndTime(): DateTime | null {
+    const matchStartUTC = DateTime.fromISO(this.match.fixture.date, {
+      zone: "utc",
+    });
+    return matchStartUTC.plus({ hours: 2 });
+  }
+
+  /**
+   * Check if we should check the match status now
+   */
+  async shouldCheckMatchStatus(): Promise<boolean> {
+    // If already posted, no need to check status
+    if (isThreadPosted(this.match.fixture.id, this.threadType)) {
+      return false;
+    }
+
+    // Get estimated end time
+    const estimatedEndTime = this.getEstimatedEndTime();
+    if (!estimatedEndTime) {
+      return false;
+    }
+
+    // Only check status if we're past the estimated end time
+    const now = DateTime.now().setZone("utc");
+    return now >= estimatedEndTime;
+  }
+
+  /**
+   * Check match status and post if finished
+   * @returns true if posted, false if not
+   */
+  async checkAndPostIfFinished(): Promise<boolean> {
+    const matchId = this.match.fixture.id;
+
+    // Get current match status
+    const status = await fetchMatchStatus(matchId);
+    console.log(`📡 Match status: ${status}`);
+
+    // If match is finished, post the thread
+    if (["FT", "AET", "PEN"].includes(status)) {
+      this.finalData = await fetchFinalMatchData(matchId);
+      await this.renderAndPostThread(this.finalData);
+      return true;
+    }
+
+    return false;
   }
 
   // Preview the thread content
@@ -28,12 +89,10 @@ export class PostMatchScheduler extends BaseScheduler {
     console.log(`Body:\n${body}`);
 
     // Calculate posting time (typically right after match ends)
-    const matchEndUTC = DateTime.fromISO(this.match.fixture.date, {
-      zone: "utc",
-    }).plus({ hours: 2 }); // Assuming match duration of ~2 hours
+    const matchEndUTC = this.getEstimatedEndTime();
 
     console.log(
-      `🕒 Would be posted at: ${matchEndUTC.toFormat(
+      `🕒 Would be posted at: ${matchEndUTC?.toFormat(
         "cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm:ss"
       )} (UTC) ${
         DRY_RUN ? "[DRY RUN 🚧]" : "[LIVE MODE 🚀]"
@@ -43,47 +102,24 @@ export class PostMatchScheduler extends BaseScheduler {
   }
 
   async createAndPostThread(): Promise<void> {
-    // If in dry run mode, just post the thread without extra messages
+    // For the post-match thread, this is triggered by match status
+    // In job mode, this is handled by checkAndPostIfFinished
+    const matchEndUTC = this.getEstimatedEndTime();
+
     if (DRY_RUN) {
-      // Fetch final data if we haven't already
+      // In dry run mode, post a sample post-match thread
       if (!this.finalData) {
         this.finalData = await fetchFinalMatchData(this.match.fixture.id);
       }
-
       await this.renderAndPostThread(this.finalData);
       return;
     }
 
-    // Calculate when to start checking match status (2h after match start)
-    const matchStartUTC = DateTime.fromISO(this.match.fixture.date, {
-      zone: "utc",
-    });
-    const checkAfter = matchStartUTC.plus({ hours: 2 });
-
-    // Wait until we should start checking
-    await this.waitUntil(checkAfter);
-
-    // Start polling for match status
-    await this.pollUntilMatchFinished();
-  }
-
-  private async pollUntilMatchFinished(): Promise<void> {
-    const matchId = this.match.fixture.id;
-
-    // Get current match status
-    const status = await fetchMatchStatus(matchId);
-    console.log(`📡 Match status: ${status}`);
-
-    // If match is finished, post the thread
-    if (["FT", "AET", "PEN"].includes(status)) {
-      this.finalData = await fetchFinalMatchData(matchId);
-      await this.renderAndPostThread(this.finalData);
-      return;
-    }
-
-    // Otherwise, check again in 2 minutes
-    console.log("⏱️ Match not finished yet. Will check again in 2 minutes...");
-    setTimeout(() => this.pollUntilMatchFinished(), 2 * 60 * 1000);
+    console.log(
+      `⏳ Post-match thread will be posted when match ends (estimated: ${matchEndUTC?.toFormat(
+        "cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm:ss"
+      )} UTC)`
+    );
   }
 
   private async renderAndPostThread(finalData: any): Promise<void> {

@@ -43,6 +43,17 @@ export class PreMatchScheduler extends BaseScheduler {
     return { title, body };
   }
 
+  /**
+   * Gets the scheduled time when this thread should be posted
+   * For pre-match thread: 24 hours before kickoff
+   */
+  getScheduledPostTime(): DateTime | null {
+    const matchStart = DateTime.fromISO(this.match.fixture.date, {
+      zone: "utc",
+    });
+    return matchStart.minus({ hours: 24 });
+  }
+
   // Preview the thread content
   async previewThreadContent(): Promise<void> {
     console.log("\n📋 [PREVIEW] Pre-Match Thread:");
@@ -51,13 +62,10 @@ export class PreMatchScheduler extends BaseScheduler {
     console.log(`Body:\n${content.body}`);
 
     // Calculate target time (24 hours before match)
-    const matchStart = DateTime.fromISO(this.match.fixture.date, {
-      zone: "utc",
-    });
-    const postAt = matchStart.minus({ hours: 24 });
+    const postAt = this.getScheduledPostTime();
 
     console.log(
-      `\n🕒 Would be posted at: ${postAt.toFormat(
+      `\n🕒 Would be posted at: ${postAt?.toFormat(
         "cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm:ss"
       )} (UTC) ${DRY_RUN ? "[DRY RUN 🚧]" : "[LIVE MODE 🚀]"}`
     );
@@ -65,14 +73,15 @@ export class PreMatchScheduler extends BaseScheduler {
   }
 
   async createAndPostThread(): Promise<void> {
-    // Calculate target time (24 hours before match)
-    const matchStart = DateTime.fromISO(this.match.fixture.date, {
-      zone: "utc",
-    });
-    const postAt = matchStart.minus({ hours: 24 });
+    // Get scheduled time
+    const postAt = this.getScheduledPostTime();
 
-    // Wait until time to post
-    await this.waitUntil(postAt);
+    // In job mode, if we're not within the posting window, don't wait
+    // The scheduler will call us again at the appropriate time
+    if (!postAt || DateTime.now().plus({ minutes: 5 }) < postAt) {
+      console.log("⏳ Not yet time to post pre-match thread");
+      return;
+    }
 
     // Post thread logic
     const threadContent = this.formatThreadContent();

@@ -17,53 +17,104 @@ export abstract class BaseScheduler {
     this.threadType = threadType;
   }
 
-  // Common method to check if thread is already posted
-  protected isAlreadyPosted(): boolean {
-    const matchId = this.match.fixture.id;
-    if (isThreadPosted(matchId, this.threadType)) {
-      console.log(`✅ Thread already posted. Skipping.`);
-      return true;
-    }
-    return false;
-  }
+  /**
+   * Start the scheduler (called by legacy continuous mode)
+   */
+  async start(): Promise<void> {
+    // Preview thread content
+    await this.previewThreadContent();
 
-  // Common method to mark thread as posted
-  protected markAsPosted(): void {
-    if (!DRY_RUN) {
-      const matchId = this.match.fixture.id;
-      markThreadPosted(matchId, this.threadType);
-    }
-  }
-
-  // Common method to wait until scheduled time
-  protected async waitUntil(targetTime: DateTime): Promise<void> {
-    const now = DateTime.utc();
-    const waitMs = targetTime.diff(now).milliseconds;
-
-    if (waitMs > 0) {
-      console.log(`⏳ Waiting until ${targetTime.toISO()} UTC...`);
-      await new Promise((res) => setTimeout(res, waitMs));
+    // Check if already posted
+    if (isThreadPosted(this.match.fixture.id, this.threadType)) {
+      console.log(`⏭️ ${this.getThreadTypeName()} already posted, skipping.`);
       return;
     }
 
-    console.warn("⚠️ Scheduled time is in the past. Running immediately...");
-  }
-
-  // Preview thread content - to be implemented by each scheduler
-  abstract previewThreadContent(): Promise<void>;
-
-  // Create and post the thread - to be implemented by each scheduler
-  abstract createAndPostThread(): Promise<void>;
-
-  // Start the scheduler
-  async start(): Promise<void> {
-    // Always preview the thread content first
-    await this.previewThreadContent();
-
-    // Skip posting if already posted
-    if (this.isAlreadyPosted()) return;
-
-    // Otherwise continue with posting
+    // Create and post the thread
     await this.createAndPostThread();
   }
+
+  /**
+   * Waits until the specified time
+   */
+  protected async waitUntil(targetTime: DateTime): Promise<void> {
+    const now = DateTime.now().setZone("utc");
+    const targetUtc = targetTime.setZone("utc");
+
+    if (targetUtc <= now) {
+      return; // Target time is in the past or now, no need to wait
+    }
+
+    const delayMs = targetUtc.diff(now).milliseconds;
+    console.log(
+      `⏱️ Waiting ${Math.round(delayMs / 1000 / 60)} minutes until ${targetUtc
+        .setZone("local")
+        .toFormat("HH:mm:ss")}`
+    );
+
+    return new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+
+  /**
+   * Marks the thread as posted
+   */
+  protected markAsPosted(): void {
+    markThreadPosted(this.match.fixture.id, this.threadType);
+  }
+
+  /**
+   * Checks if the thread should be posted now based on timing rules
+   * Job-based version to decide if action is needed
+   */
+  async shouldPostNow(): Promise<boolean> {
+    // If already posted, don't post again
+    if (isThreadPosted(this.match.fixture.id, this.threadType)) {
+      return false;
+    }
+
+    // Get the scheduled post time
+    const postTime = this.getScheduledPostTime();
+    if (!postTime) {
+      return false; // No valid post time
+    }
+
+    // Check if it's time to post (within a 5-minute window)
+    const now = DateTime.now().setZone("utc");
+    const timeDiff = postTime.diff(now).as("minutes");
+
+    // Post if we're within 5 minutes of the target time or past it
+    return timeDiff <= 5 && timeDiff > -30; // 5 min early to 30 min late window
+  }
+
+  /**
+   * Returns the human-readable thread type name
+   */
+  protected getThreadTypeName(): string {
+    switch (this.threadType) {
+      case "preMatchPosted":
+        return "Pre-match thread";
+      case "matchThreadPosted":
+        return "Match thread";
+      case "postMatchPosted":
+        return "Post-match thread";
+      default:
+        return "Thread";
+    }
+  }
+
+  /**
+   * Gets the scheduled time when this thread should be posted
+   * Each scheduler must implement this for their specific timing
+   */
+  abstract getScheduledPostTime(): DateTime | null;
+
+  /**
+   * Preview the thread content
+   */
+  abstract previewThreadContent(): Promise<void>;
+
+  /**
+   * Create and post the thread
+   */
+  abstract createAndPostThread(): Promise<void>;
 }

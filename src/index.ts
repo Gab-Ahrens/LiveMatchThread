@@ -1,5 +1,9 @@
 /**
- * Bot Entry Point
+ * Bot Entry Point - Scheduled Job Version
+ *
+ * This version runs as a scheduled job rather than a continuous process.
+ * It checks for threads to post, posts them if needed, then exits.
+ * This is more compatible with free hosting platforms.
  */
 import { fetchNextMatch } from "./api/apiClient";
 import { DRY_RUN, USE_MOCK_DATA } from "./config/appConfig";
@@ -12,92 +16,143 @@ import {
   isRefreshNeeded,
 } from "./utils/refreshState";
 
-// Global variables to track active schedulers
-let preMatchScheduler: PreMatchScheduler | null = null;
-let matchThreadScheduler: MatchThreadScheduler | null = null;
-let postMatchScheduler: PostMatchScheduler | null = null;
-
-// Start the schedulers
-async function startAllSchedulers() {
+/**
+ * Main function that runs the bot as a one-time job
+ */
+async function runBotJob() {
   console.log(
-    `🚦 Starting all schedulers in ${DRY_RUN ? "DRY RUN 🧪" : "LIVE MODE 🚀"}`
+    `🚦 Starting match thread bot job at ${new Date().toISOString()}`
   );
+  console.log(`Mode: ${DRY_RUN ? "DRY RUN 🧪" : "LIVE MODE 🚀"}`);
 
-  // Check if we need to refresh match data
-  if (!isRefreshNeeded(24)) {
-    const lastRefresh = getLastRefreshTime();
-    const hoursSince =
-      (new Date().getTime() - lastRefresh.getTime()) / (1000 * 60 * 60);
+  try {
+    // Check if we need to refresh match data
+    let match;
+    if (!isRefreshNeeded(24)) {
+      const lastRefresh = getLastRefreshTime();
+      const hoursSince =
+        (new Date().getTime() - lastRefresh.getTime()) / (1000 * 60 * 60);
+      console.log(
+        `ℹ️ Using cached match data (last refresh: ${hoursSince.toFixed(
+          1
+        )} hours ago)`
+      );
+
+      // Load cached match data
+      match = await fetchNextMatch(false); // Pass false to indicate we don't need a fresh fetch
+    } else {
+      console.log(`🔄 Fetching fresh match data (refresh needed)...`);
+      match = await fetchNextMatch(true); // Pass true to force a fresh fetch
+      if (match) {
+        updateRefreshTime();
+      }
+    }
+
+    if (!match) {
+      console.log("❌ No upcoming match found.");
+      return;
+    }
+
     console.log(
-      `ℹ️ Using cached match data (last refresh: ${hoursSince.toFixed(
-        1
-      )} hours ago)`
+      `📅 Next match: ${match.teams.home.name} vs ${
+        match.teams.away.name
+      } (${new Date(match.fixture.date).toLocaleString()})`
     );
-  } else {
-    console.log(`🔄 Fetching fresh match data (refresh needed)...`);
+
+    // Create schedulers
+    const preMatchScheduler = new PreMatchScheduler(match);
+    const matchThreadScheduler = new MatchThreadScheduler(match);
+    const postMatchScheduler = new PostMatchScheduler(match);
+
+    // In mock mode or dry run, show full previews of all thread types
+    if (USE_MOCK_DATA || DRY_RUN) {
+      console.log("\n🔍 PREVIEWS of all threads for upcoming match:");
+      await preMatchScheduler.previewThreadContent();
+      await matchThreadScheduler.previewThreadContent();
+      await postMatchScheduler.previewThreadContent();
+    }
+
+    // Check if any threads need to be posted right now
+    await checkAndPostThreads(
+      preMatchScheduler,
+      matchThreadScheduler,
+      postMatchScheduler
+    );
+
+    console.log(`✅ Bot job completed at ${new Date().toISOString()}`);
+  } catch (error) {
+    console.error("❌ Error running bot job:", error);
   }
-
-  // Fetch the next match
-  const match = await fetchNextMatch();
-
-  if (!match) {
-    console.log("❌ No upcoming match found. Will check again later.");
-    return;
-  }
-
-  // Update the refresh state
-  updateRefreshTime();
-
-  console.log(
-    `📅 Next match: ${match.teams.home.name} vs ${
-      match.teams.away.name
-    } (${new Date(match.fixture.date).toLocaleString()})`
-  );
-
-  // Initialize all schedulers first
-  preMatchScheduler = new PreMatchScheduler(match);
-  matchThreadScheduler = new MatchThreadScheduler(match);
-  postMatchScheduler = new PostMatchScheduler(match);
-
-  console.log(
-    "\n🔍 Previewing all threads that will be created for this match:"
-  );
-
-  // Start each scheduler in sequence
-  // This ensures previews appear in the correct order
-  await preMatchScheduler.start();
-  await matchThreadScheduler.start();
-  await postMatchScheduler.start();
-
-  console.log("\n✅ All schedulers have been started!");
 }
 
 /**
- * Periodically checks for match updates
- * Runs every 24 hours to refresh the match data
+ * Checks if any threads need to be posted now and posts them
  */
-async function checkForMatchUpdates() {
-  // Check if refresh is needed
-  if (isRefreshNeeded(24)) {
-    console.log(`🔄 Checking for match updates...`);
-
-    // Restart the schedulers with fresh data
-    await startAllSchedulers();
+async function checkAndPostThreads(
+  preMatchScheduler: PreMatchScheduler,
+  matchThreadScheduler: MatchThreadScheduler,
+  postMatchScheduler: PostMatchScheduler
+) {
+  // Check if pre-match thread needs to be posted
+  if (await preMatchScheduler.shouldPostNow()) {
+    console.log("🔔 Time to post pre-match thread!");
+    await preMatchScheduler.createAndPostThread();
   } else {
-    const lastRefresh = getLastRefreshTime();
-    const hoursSince =
-      (new Date().getTime() - lastRefresh.getTime()) / (1000 * 60 * 60);
-    console.log(
-      `ℹ️ Skipping refresh (last refresh: ${hoursSince.toFixed(1)} hours ago)`
-    );
+    const preMatchTime = preMatchScheduler.getScheduledPostTime();
+    if (preMatchTime) {
+      console.log(
+        `⏳ Pre-match thread will be posted at ${preMatchTime.toISO()}`
+      );
+    } else {
+      console.log("ℹ️ Pre-match thread already posted or not applicable");
+    }
   }
 
-  // Schedule the next check
-  setTimeout(checkForMatchUpdates, 1 * 60 * 60 * 1000); // Check every hour if refresh is needed
+  // Check if match thread needs to be posted
+  // This includes fetching lineups if close to kickoff
+  if (await matchThreadScheduler.shouldFetchLineupsNow()) {
+    console.log("🔔 Time to fetch lineups for upcoming match!");
+    await matchThreadScheduler.fetchAndCacheLineups();
+  }
+
+  if (await matchThreadScheduler.shouldPostNow()) {
+    console.log("🔔 Time to post match thread!");
+    await matchThreadScheduler.createAndPostThread();
+  } else {
+    const matchThreadTime = matchThreadScheduler.getScheduledPostTime();
+    if (matchThreadTime) {
+      console.log(
+        `⏳ Match thread will be posted at ${matchThreadTime.toISO()}`
+      );
+    } else {
+      console.log("ℹ️ Match thread already posted or not applicable");
+    }
+  }
+
+  // Check if post-match thread needs to be posted
+  if (await postMatchScheduler.shouldCheckMatchStatus()) {
+    console.log("🔔 Checking if match has ended...");
+    const hasPosted = await postMatchScheduler.checkAndPostIfFinished();
+    if (!hasPosted) {
+      console.log("⏳ Match not finished yet, will check on next run");
+    }
+  } else {
+    const estimatedEndTime = postMatchScheduler.getEstimatedEndTime();
+    if (estimatedEndTime) {
+      console.log(
+        `⏳ Will check for match end after ${estimatedEndTime.toISO()}`
+      );
+    } else {
+      console.log("ℹ️ Post-match thread already posted or not applicable");
+    }
+  }
 }
 
-// Start the bot
-startAllSchedulers();
-
-// Start the update checker
-setTimeout(checkForMatchUpdates, 1 * 60 * 60 * 1000); // First check after 1 hour
+// Run the bot job immediately
+runBotJob()
+  .catch(console.error)
+  .finally(() => {
+    console.log("👋 Bot job exiting");
+    // Force exit in case any pending promises are hanging
+    setTimeout(() => process.exit(0), 1000);
+  });
