@@ -2,6 +2,13 @@
   "teams": {
     "Gremio": [
       "BBBrêmio Football Sul-Canoense"
+    ],
+    "Flamengo": [
+      "Flamidia",
+      "Flabunda"
+    ],
+    "Botafogo": [
+      "Putfire"
     ]
   }
 }
