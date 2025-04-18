@@ -1,6 +1,7 @@
 import { DateTime } from "luxon";
 import { isThreadPosted, markThreadPosted } from "../utils/threadState";
 import { DRY_RUN } from "../config/appConfig";
+import { formatDateTimeForConsole } from "../utils/dateUtils";
 
 export abstract class BaseScheduler {
   protected match: any;
@@ -41,7 +42,9 @@ export abstract class BaseScheduler {
     const waitMs = targetTime.diff(now).milliseconds;
 
     if (waitMs > 0) {
-      console.log(`⏳ Waiting until ${targetTime.toISO()} UTC...`);
+      console.log(
+        `⏳ Waiting until ${formatDateTimeForConsole(targetTime)}...`
+      );
       await new Promise((res) => setTimeout(res, waitMs));
       return;
     }

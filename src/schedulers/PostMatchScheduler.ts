@@ -1,13 +1,16 @@
 import { BaseScheduler } from "./BaseScheduler";
 import { DateTime } from "luxon";
-import { postMatchThread } from "../reddit/redditClient";
 import { DRY_RUN, USE_MOCK_DATA } from "../config/appConfig";
+import { postMatchThread } from "../reddit/redditClient";
 import { fetchFinalMatchData, fetchMatchStatus } from "../api/apiClient";
 import { formatCompetition } from "../formatters/matchFormatters";
+import {
+  formatDateTimeForConsole,
+  formatThreadTime,
+  TIMEZONE_BRASILIA,
+} from "../utils/dateUtils";
 
 export class PostMatchScheduler extends BaseScheduler {
-  private finalData: any = null;
-
   constructor(match: any) {
     super(match, "postMatchPosted");
   }
@@ -17,121 +20,126 @@ export class PostMatchScheduler extends BaseScheduler {
     console.log("\n📋 [PREVIEW] Post-Match Thread:");
     console.log(`🔍 Using ${USE_MOCK_DATA ? "mock data 🧪" : "live data ☁️"}`);
 
-    // Fetch final match data if we haven't already
-    if (!this.finalData) {
-      this.finalData = await fetchFinalMatchData(this.match.fixture.id);
+    // We'll simulate a completed match for preview purposes
+    try {
+      const { title, body } = await this.formatContent();
+      console.log(`Title: ${title}`);
+      console.log(`Body:\n${body}`);
+
+      // Show the estimated posting time
+      const estimatedEnd = this.getEstimatedEndTime();
+      if (estimatedEnd) {
+        console.log(
+          `🕒 Would be posted at: ${formatDateTimeForConsole(estimatedEnd)} ${
+            DRY_RUN ? "[DRY RUN 🚧]" : "[LIVE MODE 🚀]"
+          } (after match ends)`
+        );
+      }
+      console.log("\n" + "=".repeat(80) + "\n");
+    } catch (error) {
+      console.error("❌ Error generating post-match thread preview:", error);
     }
-
-    // Generate and show preview
-    const { title, body } = this.formatThreadContent(this.finalData);
-    console.log(`Title: ${title}`);
-    console.log(`Body:\n${body}`);
-
-    // Calculate posting time (typically right after match ends)
-    const matchEndUTC = DateTime.fromISO(this.match.fixture.date, {
-      zone: "utc",
-    }).plus({ hours: 2 }); // Assuming match duration of ~2 hours
-
-    console.log(
-      `🕒 Would be posted at: ${matchEndUTC.toFormat(
-        "cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm:ss"
-      )} (UTC) ${
-        DRY_RUN ? "[DRY RUN 🚧]" : "[LIVE MODE 🚀]"
-      } (after match ends)`
-    );
-    console.log("\n" + "=".repeat(80) + "\n");
   }
 
-  async createAndPostThread(): Promise<void> {
-    // If in dry run mode, just post the thread without extra messages
-    if (DRY_RUN) {
-      // Fetch final data if we haven't already
-      if (!this.finalData) {
-        this.finalData = await fetchFinalMatchData(this.match.fixture.id);
-      }
+  // There is no scheduled post time, it depends on when the match finishes
+  getScheduledPostTime(): DateTime | null {
+    return null;
+  }
 
-      await this.renderAndPostThread(this.finalData);
-      return;
-    }
-
-    // Calculate when to start checking match status (2h after match start)
-    const matchStartUTC = DateTime.fromISO(this.match.fixture.date, {
+  // Estimate when the match will end (2 hours after kickoff)
+  getEstimatedEndTime(): DateTime | null {
+    const matchDate = DateTime.fromISO(this.match.fixture.date, {
       zone: "utc",
     });
-    const checkAfter = matchStartUTC.plus({ hours: 2 });
-
-    // Wait until we should start checking
-    await this.waitUntil(checkAfter);
-
-    // Start polling for match status
-    await this.pollUntilMatchFinished();
+    // Typical match duration is 2 hours (including halftime, added time, etc.)
+    return matchDate.plus({ hours: 2 });
   }
 
-  private async pollUntilMatchFinished(): Promise<void> {
-    const matchId = this.match.fixture.id;
-
-    // Get current match status
-    const status = await fetchMatchStatus(matchId);
-    console.log(`📡 Match status: ${status}`);
-
-    // If match is finished, post the thread
-    if (["FT", "AET", "PEN"].includes(status)) {
-      this.finalData = await fetchFinalMatchData(matchId);
-      await this.renderAndPostThread(this.finalData);
-      return;
+  // Check if we should poll for match status
+  async shouldCheckMatchStatus(): Promise<boolean> {
+    // If already posted, no need to check
+    if (this.isAlreadyPosted()) {
+      return false;
     }
 
-    // Otherwise, check again in 2 minutes
-    console.log("⏱️ Match not finished yet. Will check again in 2 minutes...");
-    setTimeout(() => this.pollUntilMatchFinished(), 2 * 60 * 1000);
+    // Only check if we're past the estimated end time
+    const estimatedEnd = this.getEstimatedEndTime();
+    const now = DateTime.now();
+
+    if (estimatedEnd && now >= estimatedEnd) {
+      return true;
+    }
+
+    return false;
   }
 
-  private async renderAndPostThread(finalData: any): Promise<void> {
-    const { title, body } = this.formatThreadContent(finalData);
+  // Check match status and post if finished
+  async checkAndPostIfFinished(): Promise<boolean> {
+    try {
+      console.log("📡 Checking match status...");
+      const status = await fetchMatchStatus(this.match.fixture.id);
+      console.log(`📡 Match status: ${status}`);
 
-    if (DRY_RUN) {
-      // In dry run mode, we've already shown the preview, so just show a brief message
-      console.log("🚧 [DRY RUN] Post-match thread would be posted to Reddit");
-    } else {
-      console.log("🚀 Posting post-match thread!");
-      await postMatchThread(title, body);
+      // If match is finished (FT), post the thread
+      if (status === "FT" || status === "AET" || status === "PEN") {
+        console.log("✅ Match has finished! Creating post-match thread...");
+        await this.createAndPostThread();
+        return true;
+      } else {
+        console.log("⏳ Match not finished yet. Current status: " + status);
+        return false;
+      }
+    } catch (error) {
+      console.error("❌ Error checking match status:", error);
+      return false;
+    }
+  }
+
+  // Create and post the thread
+  async createAndPostThread(): Promise<void> {
+    try {
+      const { title, body } = await this.formatContent();
+      await this.postThread(title, body);
       this.markAsPosted();
+    } catch (error) {
+      console.error("❌ Error creating post-match thread:", error);
     }
   }
 
-  private formatThreadContent(finalData: any) {
-    const home = finalData.teams.home.name.toUpperCase();
-    const away = finalData.teams.away.name.toUpperCase();
-    const score = finalData.score.fulltime;
-    const venue = finalData.fixture.venue;
-    const kickoff = DateTime.fromISO(finalData.fixture.date, {
-      zone: "America/Sao_Paulo",
-    })
-      .setLocale("pt-BR")
-      .toFormat("cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm");
+  // Format the thread content
+  private async formatContent(): Promise<{ title: string; body: string }> {
+    try {
+      const finalData = await fetchFinalMatchData(this.match.fixture.id);
 
-    // Use the league information from either the finalData or from the original match data
-    const leagueName =
-      finalData.league?.name || this.match.league?.name || "COMPETIÇÃO";
-    const competition = formatCompetition(leagueName);
+      // Format the thread content
+      const home = finalData.teams.home.name.toUpperCase();
+      const away = finalData.teams.away.name.toUpperCase();
+      const score = finalData.score.fulltime;
+      const venue = finalData.fixture.venue;
 
-    // Get round from either finalData or original match data
-    const roundValue =
-      finalData.league?.round ||
-      this.match.league?.round ||
-      "Regular Season - 38";
-    const round = this.formatOrdinalRound(roundValue);
+      // Format the kickoff time in Brasilia time zone
+      const kickoff = formatThreadTime(finalData.fixture.date);
 
-    let scoreLine = `${home} ${score.home} x ${score.away} ${away}`;
-    const status = finalData.fixture.status?.short || "FT";
-    if (status === "AET") scoreLine += " (após prorrogação)";
-    if (status === "PEN") {
-      const pen = finalData.score.penalty;
-      scoreLine += ` (pênaltis: ${pen.home} x ${pen.away})`;
-    }
+      // Get competition name - use the original match data for league info
+      // since it might not be in the final data
+      const leagueName = this.match.league?.name || "COMPETIÇÃO";
+      const competition = formatCompetition(leagueName);
 
-    const title = `[PÓS-JOGO] | ${competition} | ${home} ${score.home} X ${score.away} ${away} | ${round}`;
-    const body = `
+      // Format the round - use the original match data for round info
+      const roundValue = this.match.league?.round || "Regular Season - 38";
+      const round = this.formatOrdinalRound(roundValue);
+
+      // Format the score line with extra info for AET or penalties
+      let scoreLine = `${home} ${score.home} x ${score.away} ${away}`;
+      const status = finalData.fixture.status?.short || "FT";
+      if (status === "AET") scoreLine += " (após prorrogação)";
+      if (status === "PEN") {
+        const pen = finalData.score.penalty;
+        scoreLine += ` (pênaltis: ${pen.home} x ${pen.away})`;
+      }
+
+      const title = `[PÓS-JOGO] | ${competition} | ${home} ${score.home} X ${score.away} ${away} | ${round}`;
+      const body = `
 ## 📊 Resultado Final: ${competition} - ${round}
 
 **${scoreLine}**
@@ -157,9 +165,14 @@ ${this.formatStats(finalData)}
 ^(*Esse post foi criado automaticamente por um bot.*)
 `.trim();
 
-    return { title, body };
+      return { title, body };
+    } catch (error) {
+      console.error("❌ Error fetching final match data:", error);
+      throw error;
+    }
   }
 
+  // Helper method to format goals
   private formatGoals(finalData: any): string {
     const events = finalData.events || [];
     const goals = events.filter((e: any) => e.type === "Goal");
@@ -172,6 +185,7 @@ ${this.formatStats(finalData)}
       .join("\n");
   }
 
+  // Helper method to format match statistics
   private formatStats(finalData: any): string {
     const stats = finalData.statistics;
     if (!stats || stats.length < 2) return "_Estatísticas indisponíveis._";
@@ -212,6 +226,17 @@ ${this.formatStats(finalData)}
     return lines.join("\n");
   }
 
+  // Post the thread
+  private async postThread(title: string, body: string): Promise<void> {
+    if (DRY_RUN) {
+      console.log("🚧 [DRY RUN] Post-match thread would be posted to Reddit");
+    } else {
+      console.log("🚀 Posting post-match thread!");
+      await postMatchThread(title, body);
+    }
+  }
+
+  // Helper to format round number
   private formatOrdinalRound(round: string): string {
     const match = round.match(/Regular Season\s*-\s*(\d+)/i);
     if (match) return `${match[1]}ª RODADA`;

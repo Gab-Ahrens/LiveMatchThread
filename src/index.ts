@@ -11,6 +11,8 @@ import {
   updateRefreshTime,
   isRefreshNeeded,
 } from "./utils/refreshState";
+import { formatConsoleTime, formatDateTimeForConsole } from "./utils/dateUtils";
+import { DateTime } from "luxon";
 
 // Global variables to track active schedulers
 let preMatchScheduler: PreMatchScheduler | null = null;
@@ -48,10 +50,13 @@ async function startAllSchedulers() {
   // Update the refresh state
   updateRefreshTime();
 
+  // Format match time in Amsterdam timezone for console output
+  // Parse the date with Luxon to ensure proper formatting
+  const matchDateTime = DateTime.fromISO(match.fixture.date);
   console.log(
     `📅 Next match: ${match.teams.home.name} vs ${
       match.teams.away.name
-    } (${new Date(match.fixture.date).toLocaleString()})`
+    } (${formatDateTimeForConsole(matchDateTime)})`
   );
 
   // Initialize all schedulers first

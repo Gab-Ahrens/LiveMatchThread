@@ -7,6 +7,7 @@ import {
   formatMatchThread,
   formatMatchTitle,
 } from "../formatters/matchFormatters";
+import { formatDateTimeForConsole } from "../utils/dateUtils";
 
 export class MatchThreadScheduler extends BaseScheduler {
   private scheduledMatchId: number | null = null;
@@ -52,9 +53,9 @@ export class MatchThreadScheduler extends BaseScheduler {
     const postTimeUTC = matchDateUTC.minus({ minutes: 15 });
 
     console.log(
-      `🕒 Would be posted at: ${postTimeUTC.toFormat(
-        "cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm:ss"
-      )} (UTC) ${DRY_RUN ? "[DRY RUN 🚧]" : "[LIVE MODE 🚀]"}`
+      `🕒 Would be posted at: ${formatDateTimeForConsole(postTimeUTC)} ${
+        DRY_RUN ? "[DRY RUN 🚧]" : "[LIVE MODE 🚀]"
+      }`
     );
     console.log("\n" + "=".repeat(80) + "\n");
   }
@@ -81,9 +82,9 @@ export class MatchThreadScheduler extends BaseScheduler {
     if (DateTime.now() < lineupsAttemptTime) {
       console.log("⏳ Waiting until 1 hour before kickoff to fetch lineups...");
       console.log(
-        `Will attempt to fetch lineups at: ${lineupsAttemptTime.toFormat(
-          "cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm:ss"
-        )} (UTC)`
+        `Will attempt to fetch lineups at: ${formatDateTimeForConsole(
+          lineupsAttemptTime
+        )}`
       );
 
       await this.waitUntil(lineupsAttemptTime);

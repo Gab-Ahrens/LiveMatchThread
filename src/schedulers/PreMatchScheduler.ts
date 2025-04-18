@@ -3,6 +3,11 @@ import { DateTime } from "luxon";
 import { postMatchThread } from "../reddit/redditClient";
 import { DRY_RUN } from "../config/appConfig";
 import { formatCompetition } from "../formatters/matchFormatters";
+import {
+  formatThreadTime,
+  formatDateTimeForConsole,
+  TIMEZONE_BRASILIA,
+} from "../utils/dateUtils";
 
 export class PreMatchScheduler extends BaseScheduler {
   constructor(match: any) {
@@ -14,11 +19,9 @@ export class PreMatchScheduler extends BaseScheduler {
     const home = this.match.teams.home.name.toUpperCase();
     const away = this.match.teams.away.name.toUpperCase();
     const venue = this.match.fixture.venue;
-    const kickoff = DateTime.fromISO(this.match.fixture.date, {
-      zone: "America/Sao_Paulo",
-    })
-      .setLocale("pt-BR")
-      .toFormat("cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm");
+
+    // Format the kickoff time in Brasilia time zone for thread content
+    const kickoff = formatThreadTime(this.match.fixture.date);
 
     const competition = this.formatCompetitionName(
       this.match.league?.name ?? ""
@@ -57,9 +60,9 @@ export class PreMatchScheduler extends BaseScheduler {
     const postAt = matchStart.minus({ hours: 24 });
 
     console.log(
-      `\n🕒 Would be posted at: ${postAt.toFormat(
-        "cccc, dd 'de' LLLL 'de' yyyy 'às' HH:mm:ss"
-      )} (UTC) ${DRY_RUN ? "[DRY RUN 🚧]" : "[LIVE MODE 🚀]"}`
+      `\n🕒 Would be posted at: ${formatDateTimeForConsole(postAt)} ${
+        DRY_RUN ? "[DRY RUN 🚧]" : "[LIVE MODE 🚀]"
+      }`
     );
     console.log("\n" + "=".repeat(80) + "\n");
   }
