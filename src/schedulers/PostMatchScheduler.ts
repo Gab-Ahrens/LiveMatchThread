@@ -9,6 +9,7 @@ import {
   formatThreadTime,
   TIMEZONE_BRASILIA,
 } from "../utils/dateUtils";
+import { getTeamNickname } from "../utils/nicknameUtils";
 
 export class PostMatchScheduler extends BaseScheduler {
   constructor(match: any) {
@@ -112,10 +113,34 @@ export class PostMatchScheduler extends BaseScheduler {
       const finalData = await fetchFinalMatchData(this.match.fixture.id);
 
       // Format the thread content
-      const home = finalData.teams.home.name.toUpperCase();
-      const away = finalData.teams.away.name.toUpperCase();
+      const homeTeam = finalData.teams.home;
+      const awayTeam = finalData.teams.away;
       const score = finalData.score.fulltime;
       const venue = finalData.fixture.venue;
+
+      // Determine which team is Internacional and which is the opponent
+      const isHomeInter = homeTeam.name.includes("Internacional");
+
+      // Get appropriate team names (use nickname for opponent)
+      let homeName = isHomeInter
+        ? homeTeam.name.toUpperCase()
+        : getTeamNickname(homeTeam.name).toUpperCase();
+
+      let awayName = !isHomeInter
+        ? awayTeam.name.toUpperCase()
+        : getTeamNickname(awayTeam.name).toUpperCase();
+
+      // If we're using a nickname, log it for visibility
+      if (homeName !== homeTeam.name.toUpperCase()) {
+        console.log(
+          `🎭 Using nickname for opponent: ${homeName} (originally ${homeTeam.name})`
+        );
+      }
+      if (awayName !== awayTeam.name.toUpperCase()) {
+        console.log(
+          `🎭 Using nickname for opponent: ${awayName} (originally ${awayTeam.name})`
+        );
+      }
 
       // Format the kickoff time in Brasilia time zone
       const kickoff = formatThreadTime(finalData.fixture.date);
@@ -130,7 +155,7 @@ export class PostMatchScheduler extends BaseScheduler {
       const round = this.formatOrdinalRound(roundValue);
 
       // Format the score line with extra info for AET or penalties
-      let scoreLine = `${home} ${score.home} x ${score.away} ${away}`;
+      let scoreLine = `${homeName} ${score.home} x ${score.away} ${awayName}`;
       const status = finalData.fixture.status?.short || "FT";
       if (status === "AET") scoreLine += " (após prorrogação)";
       if (status === "PEN") {
@@ -138,7 +163,12 @@ export class PostMatchScheduler extends BaseScheduler {
         scoreLine += ` (pênaltis: ${pen.home} x ${pen.away})`;
       }
 
-      const title = `[PÓS-JOGO] | ${competition} | ${home} ${score.home} X ${score.away} ${away} | ${round}`;
+      const title = `[PÓS-JOGO] | ${competition} | ${homeName} ${score.home} X ${score.away} ${awayName} | ${round}`;
+
+      // For the body content, use real team names to avoid confusion in statistics
+      const realHomeName = homeTeam.name.toUpperCase();
+      const realAwayName = awayTeam.name.toUpperCase();
+
       const body = `
 ## 📊 Resultado Final: ${competition} - ${round}
 
@@ -155,7 +185,7 @@ ${this.formatGoals(finalData)}
 ---
 
 ### 📈 Estatísticas
-${this.formatStats(finalData)}
+${this.formatStats(finalData, realHomeName, realAwayName)}
 
 ---
 
@@ -186,13 +216,17 @@ ${this.formatStats(finalData)}
   }
 
   // Helper method to format match statistics
-  private formatStats(finalData: any): string {
+  private formatStats(
+    finalData: any,
+    homeName: string,
+    awayName: string
+  ): string {
     const stats = finalData.statistics;
     if (!stats || stats.length < 2) return "_Estatísticas indisponíveis._";
 
     const [homeStats, awayStats] = stats;
     const lines = [
-      `| Estatística | ${homeStats.team.name.toUpperCase()} | ${awayStats.team.name.toUpperCase()} |`,
+      `| Estatística | ${homeName} | ${awayName} |`,
       "|-------------|------------------|------------------|",
     ];
 

@@ -3,21 +3,25 @@
  *
  * Formatting functions for match threads
  */
+import { DateTime } from "luxon";
 import { fetchLast5Matches } from "../api/apiClient";
+import { getTeamNickname } from "../utils/nicknameUtils";
 
 /**
  * Formats the competition name to a standardized format
  */
 export function formatCompetition(name: string): string {
-  if (name.toLowerCase().includes("libertadores")) {
-    return "LIBERTADORES";
-  }
-  if (name.toLowerCase().includes("serie a")) {
+  // Normalize accents and special characters for comparison
+  const normalized = name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase();
+
+  // Common abbreviations and normalization
+  if (normalized.includes("SERIE A") || normalized.includes("BRASILEIRAO")) {
     return "BRASILEIRÃO";
   }
-  if (name.toLowerCase().includes("copa do brasil")) {
-    return "COPA DO BRASIL";
-  }
+
   return name.toUpperCase();
 }
 
@@ -30,7 +34,10 @@ export function formatOrdinalRound(round: string): string {
   );
   if (rodadaMatch) return `${rodadaMatch[2]}ª RODADA`;
 
-  return formatRound(round); // fallback to other logic
+  const groupMatch = round.match(/Group Stage - (\w)/i);
+  if (groupMatch) return `GRUPO ${groupMatch[1]}`;
+
+  return round.toUpperCase();
 }
 
 /**
@@ -99,13 +106,39 @@ export function formatLineups(lineups: any[]): string {
  * Formats the title for match threads
  */
 export function formatMatchTitle(match: any): string {
-  const { teams, league } = match;
-  const home = teams.home.name.toUpperCase();
-  const away = teams.away.name.toUpperCase();
-  const competition = formatCompetition(league.name);
-  const round = formatOrdinalRound(league.round);
+  // Get competition name
+  const competition = formatCompetition(match.league?.name || "CAMPEONATO");
 
-  return `[JOGO] | ${competition} | ${home} X ${away} | ${round}`;
+  // Get round
+  const round = formatOrdinalRound(match.league?.round || "");
+
+  // Determine which team is Internacional and which is the opponent
+  const homeTeam = match.teams.home;
+  const awayTeam = match.teams.away;
+  const isHomeInter = homeTeam.name.includes("Internacional");
+
+  // Get appropriate team names (use nickname for opponent)
+  let homeName = isHomeInter
+    ? homeTeam.name.toUpperCase()
+    : getTeamNickname(homeTeam.name).toUpperCase();
+
+  let awayName = !isHomeInter
+    ? awayTeam.name.toUpperCase()
+    : getTeamNickname(awayTeam.name).toUpperCase();
+
+  // If we're using a nickname, log it for visibility
+  if (homeName !== homeTeam.name.toUpperCase()) {
+    console.log(
+      `🎭 Using nickname for opponent: ${homeName} (originally ${homeTeam.name})`
+    );
+  }
+  if (awayName !== awayTeam.name.toUpperCase()) {
+    console.log(
+      `🎭 Using nickname for opponent: ${awayName} (originally ${awayTeam.name})`
+    );
+  }
+
+  return `[JOGO] | ${competition} | ${homeName} X ${awayName} | ${round}`;
 }
 
 /**

@@ -8,6 +8,7 @@ import {
   formatDateTimeForConsole,
   TIMEZONE_BRASILIA,
 } from "../utils/dateUtils";
+import { getTeamNickname } from "../utils/nicknameUtils";
 
 export class PreMatchScheduler extends BaseScheduler {
   constructor(match: any) {
@@ -16,8 +17,34 @@ export class PreMatchScheduler extends BaseScheduler {
 
   // Generate thread content
   private formatThreadContent() {
-    const home = this.match.teams.home.name.toUpperCase();
-    const away = this.match.teams.away.name.toUpperCase();
+    // Get home and away team names
+    const homeTeam = this.match.teams.home;
+    const awayTeam = this.match.teams.away;
+
+    // Determine which team is Internacional and which is the opponent
+    const isHomeInter = homeTeam.name.includes("Internacional");
+
+    // Get appropriate team names (use nickname for opponent)
+    let homeName = isHomeInter
+      ? homeTeam.name.toUpperCase()
+      : getTeamNickname(homeTeam.name).toUpperCase();
+
+    let awayName = !isHomeInter
+      ? awayTeam.name.toUpperCase()
+      : getTeamNickname(awayTeam.name).toUpperCase();
+
+    // If we're using a nickname, log it for visibility
+    if (homeName !== homeTeam.name.toUpperCase()) {
+      console.log(
+        `🎭 Using nickname for opponent: ${homeName} (originally ${homeTeam.name})`
+      );
+    }
+    if (awayName !== awayTeam.name.toUpperCase()) {
+      console.log(
+        `🎭 Using nickname for opponent: ${awayName} (originally ${awayTeam.name})`
+      );
+    }
+
     const venue = this.match.fixture.venue;
 
     // Format the kickoff time in Brasilia time zone for thread content
@@ -28,7 +55,7 @@ export class PreMatchScheduler extends BaseScheduler {
     );
     const round = this.formatOrdinalRound(this.match.league?.round || "");
 
-    const title = `[PRÉ-JOGO] | ${competition} | ${home} X ${away} | ${round}`;
+    const title = `[PRÉ-JOGO] | ${competition} | ${homeName} X ${awayName} | ${round}`;
     const body = `
 ## 📝 Informações da Partida
 
