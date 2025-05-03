@@ -3,3 +3,5 @@ dist/
 .env
 /data/*
 !data/.gitkeep
+test-logs/
+mock-data/test-match-data.json
