@@ -10,6 +10,12 @@ dotenv.config();
 // Runtime flags
 export const DRY_RUN = process.env.DRY_RUN === "true";
 export const USE_MOCK_DATA = process.env.USE_MOCK_DATA === "true";
+export const SIMULATION_MODE = process.env.SIMULATION_MODE === "true";
+export const MATCH_STATUS_OVERRIDE = process.env.MATCH_STATUS_OVERRIDE || null;
+export const SIMULATION_SPEED = parseInt(
+  process.env.SIMULATION_SPEED || "1",
+  10
+); // Speed multiplier for simulations
 
 // Football API configuration
 export const API_BASE_URL = "https://api-football-v1.p.rapidapi.com/v3";

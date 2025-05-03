@@ -20,7 +20,7 @@ let matchThreadScheduler: MatchThreadScheduler | null = null;
 let postMatchScheduler: PostMatchScheduler | null = null;
 
 // Start the schedulers
-async function startAllSchedulers() {
+export async function startAllSchedulers() {
   console.log(
     `🚦 Starting all schedulers in ${DRY_RUN ? "DRY RUN 🧪" : "LIVE MODE 🚀"}`
   );

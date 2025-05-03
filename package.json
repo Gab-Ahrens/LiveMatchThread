@@ -8,7 +8,10 @@
     "build": "tsc && node scripts/copy-assets.js",
     "start": "node dist/index.js",
     "capture-mock-data": "ts-node scripts/captureApiData.ts",
-    "clean-mock-data": "rimraf mock-data/*"
+    "clean-mock-data": "rimraf mock-data/*",
+    "test:sim": "cross-env DRY_RUN=true USE_MOCK_DATA=true SIMULATION_MODE=true SIMULATION_SPEED=30 ts-node src/test/simulateMatch.ts",
+    "test:post": "cross-env DRY_RUN=true USE_MOCK_DATA=true SIMULATION_MODE=true ts-node src/test/testPostMatch.ts",
+    "test:sim:real": "cross-env USE_MOCK_DATA=true SIMULATION_MODE=true SIMULATION_SPEED=30 ts-node src/test/simulateMatch.ts"
   },
   "keywords": [],
   "author": "",

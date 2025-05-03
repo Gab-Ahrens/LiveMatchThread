@@ -13,7 +13,11 @@ import {
   SEASON,
   RAPIDAPI_KEY,
   RAPIDAPI_HOST,
+  SIMULATION_MODE,
+  MATCH_STATUS_OVERRIDE,
+  SIMULATION_SPEED,
 } from "../config/appConfig";
+import { DateTime } from "luxon";
 
 const HEADERS = {
   "x-rapidapi-key": RAPIDAPI_KEY,
@@ -58,6 +62,16 @@ function readMockData(filePath: string): any {
 export async function fetchNextMatch(retries = 3): Promise<any | null> {
   if (USE_MOCK_DATA) {
     console.log("🧪 Using mock data for next match.");
+
+    // In simulation mode, check if we have a test match file first
+    if (SIMULATION_MODE) {
+      const testMatchFile = path.join(MOCK_DIR, "test-match-data.json");
+      if (fs.existsSync(testMatchFile)) {
+        console.log("🧪 [SIMULATION] Using test match data");
+        return JSON.parse(fs.readFileSync(testMatchFile, "utf-8"));
+      }
+    }
+
     return readMockData(MOCK_FILES.match);
   }
 
@@ -205,6 +219,19 @@ export async function fetchMatchStatus(fixtureId: number): Promise<string> {
     return mockMatch?.fixture?.status?.short || "FT";
   }
 
+  // Check if we're in simulation mode
+  if (SIMULATION_MODE) {
+    return simulateMatchStatus(fixtureId);
+  }
+
+  // If a specific match status is being forced for testing
+  if (MATCH_STATUS_OVERRIDE) {
+    console.log(
+      `🧪 [TEST] Overriding match status to: ${MATCH_STATUS_OVERRIDE}`
+    );
+    return MATCH_STATUS_OVERRIDE;
+  }
+
   console.log(`📡 Checking match status for fixture ID ${fixtureId}...`);
 
   try {
@@ -218,6 +245,61 @@ export async function fetchMatchStatus(fixtureId: number): Promise<string> {
   } catch (error: any) {
     console.error("❌ Error fetching match status:", error.message);
     return "NS";
+  }
+}
+
+/**
+ * Simulates a progressing match status based on current time and match start time
+ */
+function simulateMatchStatus(fixtureId: number): string {
+  // Get match data from mock
+  const mockMatch = readMockData(MOCK_FILES.match);
+  if (!mockMatch) {
+    return "NS";
+  }
+
+  // Get match kickoff time and current time
+  const kickoffTime = DateTime.fromISO(mockMatch.fixture.date);
+  const now = DateTime.now();
+
+  // Calculate minutes since kickoff, adjusted by simulation speed
+  const diffMinutes =
+    now.diff(kickoffTime, "minutes").minutes * SIMULATION_SPEED;
+  console.log(
+    `🧪 [SIMULATION] Match time: ${Math.floor(
+      diffMinutes
+    )} minutes from kickoff`
+  );
+
+  // Simulate different match statuses based on time elapsed
+  if (diffMinutes < 0) {
+    // Before kickoff
+    console.log("🧪 [SIMULATION] Match hasn't started yet");
+    return "NS";
+  } else if (diffMinutes < 1) {
+    // Just started
+    console.log("🧪 [SIMULATION] Match just started");
+    return "1H";
+  } else if (diffMinutes < 45) {
+    // First half
+    console.log(
+      `🧪 [SIMULATION] First half: ${Math.floor(diffMinutes)}' minute`
+    );
+    return "1H";
+  } else if (diffMinutes < 60) {
+    // Half time
+    console.log("🧪 [SIMULATION] Half time");
+    return "HT";
+  } else if (diffMinutes < 105) {
+    // Second half
+    console.log(
+      `🧪 [SIMULATION] Second half: ${Math.floor(diffMinutes)}' minute`
+    );
+    return "2H";
+  } else {
+    // Full time
+    console.log("🧪 [SIMULATION] Match finished");
+    return "FT";
   }
 }
 
