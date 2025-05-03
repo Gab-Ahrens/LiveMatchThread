@@ -38,18 +38,54 @@ export abstract class BaseScheduler {
 
   // Common method to wait until scheduled time
   protected async waitUntil(targetTime: DateTime): Promise<void> {
+    // Make sure both times are in UTC for comparison
     const now = DateTime.utc();
-    const waitMs = targetTime.diff(now).milliseconds;
+    const targetUtc = targetTime.toUTC();
+
+    // Calculate wait time in milliseconds
+    const waitMs = targetUtc.diff(now).milliseconds;
+
+    console.log(`⏳ Current time (UTC): ${now.toISO()}`);
+    console.log(`⏳ Target time (UTC): ${targetUtc.toISO()}`);
+    console.log(
+      `⏳ Wait time: ${Math.round(waitMs / 1000)} seconds (${Math.round(
+        waitMs / 60000
+      )} minutes)`
+    );
 
     if (waitMs > 0) {
-      console.log(
-        `⏳ Waiting until ${formatDateTimeForConsole(targetTime)}...`
-      );
+      console.log(`⏳ Waiting until ${formatDateTimeForConsole(targetUtc)}...`);
+
+      // For long waits (> 30 minutes), log periodic updates
+      if (waitMs > 30 * 60 * 1000) {
+        const updateInterval = 15 * 60 * 1000; // 15 minutes
+        const updateTimer = setInterval(() => {
+          const remainingMs = targetUtc.diff(DateTime.utc()).milliseconds;
+          if (remainingMs <= 0) {
+            clearInterval(updateTimer);
+            return;
+          }
+          console.log(
+            `⏳ Still waiting... ${Math.round(
+              remainingMs / 60000
+            )} minutes remaining`
+          );
+        }, updateInterval);
+
+        // Don't forget to clear the interval when done
+        setTimeout(() => clearInterval(updateTimer), waitMs + 1000);
+      }
+
       await new Promise((res) => setTimeout(res, waitMs));
+      console.log(`✅ Wait complete. Posting thread now.`);
       return;
     }
 
-    console.warn("⚠️ Scheduled time is in the past. Running immediately...");
+    console.warn(
+      `⚠️ Scheduled time (${formatDateTimeForConsole(
+        targetUtc
+      )}) is in the past. Running immediately...`
+    );
   }
 
   // Preview thread content - to be implemented by each scheduler

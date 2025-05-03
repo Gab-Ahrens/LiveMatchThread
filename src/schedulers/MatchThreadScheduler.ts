@@ -50,7 +50,7 @@ export class MatchThreadScheduler extends BaseScheduler {
     const matchDateUTC = DateTime.fromISO(this.match.fixture.date, {
       zone: "utc",
     });
-    const postTimeUTC = matchDateUTC.minus({ minutes: 15 });
+    const postTimeUTC = matchDateUTC.minus({ minutes: 20 });
 
     console.log(
       `🕒 Would be posted at: ${formatDateTimeForConsole(postTimeUTC)} ${
@@ -67,7 +67,7 @@ export class MatchThreadScheduler extends BaseScheduler {
     const matchDateUTC = DateTime.fromISO(this.match.fixture.date, {
       zone: "utc",
     });
-    const postTimeUTC = matchDateUTC.minus({ minutes: 15 });
+    const postTimeUTC = matchDateUTC.minus({ minutes: 20 });
 
     // Don't schedule if already scheduled
     if (this.scheduledMatchId === matchId) {
