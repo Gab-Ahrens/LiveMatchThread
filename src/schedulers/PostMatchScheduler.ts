@@ -58,38 +58,17 @@ export class PostMatchScheduler extends BaseScheduler {
 
   // Check if we should poll for match status
   async shouldCheckMatchStatus(): Promise<boolean> {
-    // If already posted, no need to check
-    if (this.isAlreadyPosted()) {
-      return false;
-    }
-
-    // Only check if we're past the estimated end time
-    const estimatedEnd = this.getEstimatedEndTime();
-    const now = DateTime.now();
-
-    if (estimatedEnd && now >= estimatedEnd) {
-      return true;
-    }
-
+    // This functionality is now handled by our new polling system
+    // Always return false to disable the old check system
     return false;
   }
 
   // Check match status and post if finished
   async checkAndPostIfFinished(): Promise<boolean> {
     try {
-      console.log("📡 Checking match status...");
-      const status = await fetchMatchStatus(this.match.fixture.id);
-      console.log(`📡 Match status: ${status}`);
-
-      // If match is finished (FT), post the thread
-      if (status === "FT" || status === "AET" || status === "PEN") {
-        console.log("✅ Match has finished! Creating post-match thread...");
-        await this.createAndPostThread();
-        return true;
-      } else {
-        console.log("⏳ Match not finished yet. Current status: " + status);
-        return false;
-      }
+      console.log("📡 Checking match status (legacy method)...");
+      // This is now handled by the new polling system
+      return false;
     } catch (error) {
       console.error("❌ Error checking match status:", error);
       return false;
@@ -99,12 +78,101 @@ export class PostMatchScheduler extends BaseScheduler {
   // Create and post the thread
   async createAndPostThread(): Promise<void> {
     try {
-      const { title, body } = await this.formatContent();
-      await this.postThread(title, body);
-      this.markAsPosted();
+      // Setup a polling interval to check match status
+      console.log(
+        "⏳ Setting up post-match thread scheduling and match status polling..."
+      );
+
+      // Get match kickoff time
+      const matchDate = DateTime.fromISO(this.match.fixture.date, {
+        zone: "utc",
+      });
+      const now = DateTime.now();
+
+      // Start checking the match status at kickoff time
+      // If kickoff time is in the past, start checking immediately
+      if (now >= matchDate) {
+        console.log(
+          "🔄 Match already started. Starting match status polling immediately..."
+        );
+        this.startPollingMatchStatus();
+      } else {
+        const waitMs = matchDate.diff(now).milliseconds;
+        console.log(
+          `⏱️ Will start polling match status at kickoff time (in ${Math.round(
+            waitMs / 60000
+          )} minutes)`
+        );
+
+        // Wait until the match starts before polling
+        setTimeout(() => {
+          console.log(
+            "⚽ Match kickoff time reached. Starting match status polling..."
+          );
+          this.startPollingMatchStatus();
+        }, waitMs);
+      }
     } catch (error) {
-      console.error("❌ Error creating post-match thread:", error);
+      console.error("❌ Error setting up post-match thread:", error);
     }
+  }
+
+  // Start polling for match status
+  private startPollingMatchStatus(): void {
+    // Check status every 1 minute during the match
+    const checkInterval = 60_000; // 1 minute
+    let statusCheckCount = 0;
+
+    console.log(
+      `🔄 Starting to poll for match end (interval: ${
+        checkInterval / 1000
+      }s)...`
+    );
+
+    const intervalId = setInterval(async () => {
+      try {
+        statusCheckCount++;
+        console.log(`📡 Checking match status (check #${statusCheckCount})...`);
+        const status = await fetchMatchStatus(this.match.fixture.id);
+        console.log(`📡 Match status: ${status}`);
+
+        // If match is finished (FT = full time, AET = after extra time, PEN = penalties)
+        if (status === "FT" || status === "AET" || status === "PEN") {
+          console.log("✅ Match has finished! Creating post-match thread...");
+          clearInterval(intervalId);
+
+          // Wait 2 minutes after the match ends before posting
+          // This allows the API to update all the final statistics
+          console.log(
+            "⏱️ Waiting 2 minutes for final match data to be available..."
+          );
+          setTimeout(async () => {
+            try {
+              const { title, body } = await this.formatContent();
+              await this.postThread(title, body);
+              this.markAsPosted();
+            } catch (postError) {
+              console.error("❌ Error posting post-match thread:", postError);
+            }
+          }, 2 * 60 * 1000);
+        } else if (
+          ["NS", "PST", "TBD", "CANC", "ABD", "AWD", "WO"].includes(status)
+        ) {
+          // Match hasn't started, is postponed, cancelled, or other terminal non-playing state
+          console.log(
+            `⚠️ Match has unexpected status: ${status}. Slowing down polling.`
+          );
+          clearInterval(intervalId);
+
+          // Slow down polling for non-started matches to once per hour
+          setTimeout(() => this.startPollingMatchStatus(), 60 * 60 * 1000);
+        } else {
+          console.log(`⏳ Match in progress. Current status: ${status}`);
+        }
+      } catch (error) {
+        console.error("❌ Error checking match status:", error);
+      }
+    }, checkInterval);
   }
 
   // Format the thread content
