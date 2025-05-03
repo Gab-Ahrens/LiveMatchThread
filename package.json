@@ -11,7 +11,11 @@
     "clean-mock-data": "rimraf mock-data/*",
     "test:sim": "cross-env DRY_RUN=true USE_MOCK_DATA=true SIMULATION_MODE=true SIMULATION_SPEED=30 ts-node src/test/simulateMatch.ts",
     "test:post": "cross-env DRY_RUN=true USE_MOCK_DATA=true SIMULATION_MODE=true ts-node src/test/testPostMatch.ts",
-    "test:sim:real": "cross-env USE_MOCK_DATA=true SIMULATION_MODE=true SIMULATION_SPEED=30 ts-node src/test/simulateMatch.ts"
+    "test:sim:real": "cross-env USE_MOCK_DATA=true SIMULATION_MODE=true SIMULATION_SPEED=30 ts-node src/test/simulateMatch.ts",
+    "test:cancelled": "cross-env DRY_RUN=true USE_MOCK_DATA=true SIMULATION_MODE=true MATCH_STATUS_OVERRIDE=CANC ts-node src/test/testIrregularMatchEnd.ts",
+    "test:suspended": "cross-env DRY_RUN=true USE_MOCK_DATA=true SIMULATION_MODE=true MATCH_STATUS_OVERRIDE=SUSP ts-node src/test/testIrregularMatchEnd.ts",
+    "test:abandoned": "cross-env DRY_RUN=true USE_MOCK_DATA=true SIMULATION_MODE=true MATCH_STATUS_OVERRIDE=ABD ts-node src/test/testIrregularMatchEnd.ts",
+    "test:all-statuses": "node src/test/testAllStatuses.js"
   },
   "keywords": [],
   "author": "",

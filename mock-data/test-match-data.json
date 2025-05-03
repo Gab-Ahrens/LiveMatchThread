@@ -1,0 +1,70 @@
+{
+  "fixture": {
+    "id": 1006025,
+    "referee": "Flavio Rodrigues De Souza",
+    "timezone": "UTC",
+    "date": "2025-05-03T23:11:30.027+02:00",
+    "timestamp": 1701909000,
+    "periods": {
+      "first": 1701909000,
+      "second": 1701912600
+    },
+    "venue": {
+      "id": 244,
+      "name": "Estádio José Pinheiro Borda",
+      "city": "Porto Alegre, Rio Grande do Sul"
+    },
+    "status": {
+      "long": "Match Finished",
+      "short": "NS",
+      "elapsed": 90,
+      "extra": null
+    }
+  },
+  "league": {
+    "id": 71,
+    "name": "Serie A",
+    "country": "Brazil",
+    "logo": "https://media.api-sports.io/football/leagues/71.png",
+    "flag": "https://media.api-sports.io/flags/br.svg",
+    "season": 2023,
+    "round": "Regular Season - 38",
+    "standings": true
+  },
+  "teams": {
+    "home": {
+      "id": 119,
+      "name": "Internacional",
+      "logo": "https://media.api-sports.io/football/teams/119.png",
+      "winner": true
+    },
+    "away": {
+      "id": 120,
+      "name": "Botafogo",
+      "logo": "https://media.api-sports.io/football/teams/120.png",
+      "winner": false
+    }
+  },
+  "goals": {
+    "home": 3,
+    "away": 1
+  },
+  "score": {
+    "halftime": {
+      "home": 1,
+      "away": 0
+    },
+    "fulltime": {
+      "home": 3,
+      "away": 1
+    },
+    "extratime": {
+      "home": null,
+      "away": null
+    },
+    "penalty": {
+      "home": null,
+      "away": null
+    }
+  }
+}

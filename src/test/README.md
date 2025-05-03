@@ -29,6 +29,31 @@ npm run test:post
 
 This immediately simulates a match that has just finished and tests the post-match thread creation.
 
+### Irregular Match Endings
+
+To test how the bot handles matches that end in irregular ways:
+
+```bash
+# Test cancelled match
+npm run test:cancelled
+
+# Test suspended match
+npm run test:suspended
+
+# Test abandoned match
+npm run test:abandoned
+```
+
+### Test All Match Statuses
+
+To run tests for every possible match status from the API:
+
+```bash
+npm run test:all-statuses
+```
+
+This will run individual tests for each status and save logs in the `test-logs` directory.
+
 ### Real Posting Test
 
 If you want to test the actual posting to Reddit (but still with accelerated simulation):
@@ -67,15 +92,32 @@ cleanupTestFiles();
 
 ## Available Status Codes
 
-When using `setMatchToStatus()`, you can use the following status codes:
+The API-Football provides the following match status codes, all of which are now handled by our system:
 
+### Pre-match Statuses
+- `TBD`: To Be Defined
 - `NS`: Not Started
+- `PST`: Postponed
+
+### In-play Statuses
 - `1H`: First Half
 - `HT`: Half Time
 - `2H`: Second Half
-- `FT`: Full Time (match ended)
+- `BT`: Break Time
+- `ET`: Extra Time
+- `P`: Penalty In Progress
+- `SUSP`: Suspended
+- `INT`: Interrupted
+- `LIVE`: Live (general in-play)
+
+### Match Ended Statuses
+- `FT`: Full Time (regular)
 - `AET`: After Extra Time
 - `PEN`: Penalties
+- `WO`: Walkover
+- `AWD`: Awarded
+- `CANC`: Cancelled
+- `ABD`: Abandoned
 
 ## Troubleshooting
 
@@ -83,4 +125,5 @@ If you encounter any issues:
 
 1. Make sure all test files are cleaned up: `npm run clean-mock-data`
 2. Check that `mock-data/match-data.json` exists (required for simulation)
-3. Verify that the `.env` file has all necessary API and Reddit credentials 
+3. Verify that the `.env` file has all necessary API and Reddit credentials
+4. Examine test logs in the `test-logs` directory 

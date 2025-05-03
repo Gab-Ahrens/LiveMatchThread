@@ -122,6 +122,10 @@ export class PostMatchScheduler extends BaseScheduler {
     // Check status every 1 minute during the match
     const checkInterval = 60_000; // 1 minute
     let statusCheckCount = 0;
+    let consecutiveErrors = 0;
+
+    // Maximum polling duration (4 hours)
+    const maxPollingDuration = 4 * 60 * 60 * 1000;
 
     console.log(
       `🔄 Starting to poll for match end (interval: ${
@@ -136,8 +140,24 @@ export class PostMatchScheduler extends BaseScheduler {
         const status = await fetchMatchStatus(this.match.fixture.id);
         console.log(`📡 Match status: ${status}`);
 
-        // If match is finished (FT = full time, AET = after extra time, PEN = penalties)
-        if (status === "FT" || status === "AET" || status === "PEN") {
+        // Reset error counter on successful API call
+        consecutiveErrors = 0;
+
+        // Group statuses by category for easier handling
+        const finishedStatuses = ["FT", "AET", "PEN"];
+        const irregularEndingStatuses = [
+          "CANC",
+          "ABD",
+          "AWD",
+          "WO",
+          "SUSP",
+          "INT",
+        ];
+        const preMatchStatuses = ["NS", "PST", "TBD"];
+        const inPlayStatuses = ["1H", "2H", "HT", "BT", "ET", "P", "LIVE"];
+
+        // Match has finished normally
+        if (finishedStatuses.includes(status)) {
           console.log("✅ Match has finished! Creating post-match thread...");
           clearInterval(intervalId);
 
@@ -155,28 +175,138 @@ export class PostMatchScheduler extends BaseScheduler {
               console.error("❌ Error posting post-match thread:", postError);
             }
           }, 2 * 60 * 1000);
-        } else if (
-          ["NS", "PST", "TBD", "CANC", "ABD", "AWD", "WO"].includes(status)
-        ) {
-          // Match hasn't started, is postponed, cancelled, or other terminal non-playing state
+        }
+        // Match has ended irregularly
+        else if (irregularEndingStatuses.includes(status)) {
           console.log(
-            `⚠️ Match has unexpected status: ${status}. Slowing down polling.`
+            `⚠️ Match ended with irregular status: ${status}. Creating post-match thread with special notice.`
           );
           clearInterval(intervalId);
 
-          // Slow down polling for non-started matches to once per hour
-          setTimeout(() => this.startPollingMatchStatus(), 60 * 60 * 1000);
-        } else {
+          setTimeout(async () => {
+            try {
+              // Create a modified post-match thread that acknowledges the irregular ending
+              const { title, body } = await this.formatContent(status);
+              await this.postThread(title, body);
+              this.markAsPosted();
+            } catch (postError) {
+              console.error(
+                "❌ Error posting post-match thread for irregular ending:",
+                postError
+              );
+            }
+          }, 2 * 60 * 1000);
+        }
+        // Match hasn't started or is scheduled
+        else if (preMatchStatuses.includes(status)) {
+          console.log(
+            `ℹ️ Match has not yet started (${status}). Continuing to poll...`
+          );
+
+          // If status is consistently showing match hasn't started for a while,
+          // we might want to reduce polling frequency
+          if (statusCheckCount > 30 && preMatchStatuses.includes(status)) {
+            console.log(
+              "⏱️ Match still not started after multiple checks. Reducing polling frequency..."
+            );
+            clearInterval(intervalId);
+            setTimeout(() => this.startPollingMatchStatus(), 15 * 60 * 1000); // Check every 15 minutes
+          }
+        }
+        // Match is in play
+        else if (inPlayStatuses.includes(status)) {
           console.log(`⏳ Match in progress. Current status: ${status}`);
+
+          // For specific in-play statuses, we might adjust polling behavior
+          if (status === "HT" || status === "BT") {
+            console.log(
+              "⏱️ Match is at half-time or break. Continuing to poll..."
+            );
+          } else if (status === "ET" || status === "P") {
+            console.log(
+              "⚽ Match is in extra time or penalties. Continuing to poll with standard frequency..."
+            );
+          }
+        }
+        // Unknown status
+        else {
+          console.log(
+            `⚠️ Unknown match status: ${status}. Continuing to poll...`
+          );
         }
       } catch (error) {
-        console.error("❌ Error checking match status:", error);
+        consecutiveErrors++;
+        console.error(
+          `❌ Error checking match status (error #${consecutiveErrors}):`,
+          error
+        );
+
+        // Implement exponential backoff for errors
+        if (consecutiveErrors > 5) {
+          console.warn(
+            `⚠️ Too many consecutive errors (${consecutiveErrors}). Slowing down polling...`
+          );
+          clearInterval(intervalId);
+          // Retry after 5 minutes if we're hitting too many errors
+          setTimeout(() => this.startPollingMatchStatus(), 5 * 60 * 1000);
+        }
       }
     }, checkInterval);
+
+    // Set a timeout to stop polling after max duration
+    setTimeout(() => {
+      console.log(
+        `⚠️ Maximum polling duration reached (${
+          maxPollingDuration / 3600000
+        } hours). Stopping poll.`
+      );
+      clearInterval(intervalId);
+
+      // Try one last time to check match status
+      this.checkFinalStatusAndPost();
+    }, maxPollingDuration);
+  }
+
+  // In case polling times out, make one final attempt to check status and post
+  private async checkFinalStatusAndPost(): Promise<void> {
+    try {
+      console.log(
+        "🔍 Making final check of match status after polling timeout..."
+      );
+      const status = await fetchMatchStatus(this.match.fixture.id);
+
+      const finishedStatuses = [
+        "FT",
+        "AET",
+        "PEN",
+        "CANC",
+        "ABD",
+        "AWD",
+        "WO",
+        "SUSP",
+        "INT",
+      ];
+      if (finishedStatuses.includes(status)) {
+        console.log(
+          `✅ Match has ended with status: ${status}. Creating post-match thread...`
+        );
+        const { title, body } = await this.formatContent(status);
+        await this.postThread(title, body);
+        this.markAsPosted();
+      } else {
+        console.log(
+          `⚠️ Match still not ended (status: ${status}) after maximum polling time. No post-match thread created.`
+        );
+      }
+    } catch (error) {
+      console.error("❌ Error in final status check:", error);
+    }
   }
 
   // Format the thread content
-  private async formatContent(): Promise<{ title: string; body: string }> {
+  private async formatContent(
+    matchStatus?: string
+  ): Promise<{ title: string; body: string }> {
     try {
       const finalData = await fetchFinalMatchData(this.match.fixture.id);
 
@@ -224,11 +354,47 @@ export class PostMatchScheduler extends BaseScheduler {
 
       // Format the score line with extra info for AET or penalties
       let scoreLine = `${homeName} ${score.home} x ${score.away} ${awayName}`;
-      const status = finalData.fixture.status?.short || "FT";
+      const status = matchStatus || finalData.fixture.status?.short || "FT";
+
+      // Add extra information based on match status
       if (status === "AET") scoreLine += " (após prorrogação)";
       if (status === "PEN") {
         const pen = finalData.score.penalty;
         scoreLine += ` (pênaltis: ${pen.home} x ${pen.away})`;
+      }
+
+      // Handle irregular match endings
+      let specialNotice = "";
+      if (["CANC", "SUSP", "INT", "ABD", "AWD", "WO"].includes(status)) {
+        let statusText = "";
+        switch (status) {
+          case "CANC":
+            statusText = "CANCELADA";
+            break;
+          case "SUSP":
+            statusText = "SUSPENSA";
+            break;
+          case "INT":
+            statusText = "INTERROMPIDA";
+            break;
+          case "ABD":
+            statusText = "ABANDONADA";
+            break;
+          case "AWD":
+            statusText = "RESULTADO DECIDIDO";
+            break;
+          case "WO":
+            statusText = "W.O.";
+            break;
+          default:
+            statusText = status;
+        }
+
+        specialNotice = `
+## ⚠️ ATENÇÃO: PARTIDA ${statusText}
+
+**A partida não foi concluída normalmente.**
+`;
       }
 
       const title = `[PÓS-JOGO] | ${competition} | ${homeName} ${score.home} X ${score.away} ${awayName} | ${round}`;
@@ -239,7 +405,7 @@ export class PostMatchScheduler extends BaseScheduler {
 
       const body = `
 ## 📊 Resultado Final: ${competition} - ${round}
-
+${specialNotice}
 **${scoreLine}**
 
 📍 *${venue.name}, ${venue.city}*  
