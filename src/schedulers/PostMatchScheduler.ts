@@ -21,11 +21,38 @@ export class PostMatchScheduler extends BaseScheduler {
     console.log("\n📋 [PREVIEW] Post-Match Thread:");
     console.log(`🔍 Using ${USE_MOCK_DATA ? "mock data 🧪" : "live data ☁️"}`);
 
-    // We'll simulate a completed match for preview purposes
+    // For preview, we'll create a simulated title since the match hasn't finished yet
     try {
-      const { title, body } = await this.formatContent();
-      console.log(`Title: ${title}`);
-      console.log(`Body:\n${body}`);
+      if (USE_MOCK_DATA) {
+        // If using mock data, we can show the actual formatted content
+        const { title, body } = await this.formatContent();
+        console.log(`Title: ${title}`);
+        console.log(`Body:\n${body}`);
+      } else {
+        // For live data, show a preview with placeholder scores since match hasn't finished
+        const homeTeam = this.match.teams.home.name;
+        const awayTeam = this.match.teams.away.name;
+        const competition = formatCompetition(
+          this.match.league?.name || "COMPETIÇÃO"
+        );
+        const roundValue = this.match.league?.round || "Regular Season - 38";
+        const round = this.formatOrdinalRound(roundValue);
+
+        // Determine which team is Internacional and use nicknames for opponents
+        const isHomeInter = homeTeam.includes("Internacional");
+        let homeName = isHomeInter
+          ? homeTeam.toUpperCase()
+          : getTeamNickname(homeTeam).toUpperCase();
+        let awayName = !isHomeInter
+          ? awayTeam.toUpperCase()
+          : getTeamNickname(awayTeam).toUpperCase();
+
+        const previewTitle = `[PÓS-JOGO] | ${competition} | ${homeName} X X ${awayName} | ${round}`;
+        console.log(`Title: ${previewTitle}`);
+        console.log(
+          `Body: [Post-match content will be generated after the match ends with final scores, goals, and statistics]`
+        );
+      }
 
       // Show the estimated posting time
       const estimatedEnd = this.getEstimatedEndTime();
@@ -78,6 +105,12 @@ export class PostMatchScheduler extends BaseScheduler {
   // Create and post the thread
   async createAndPostThread(): Promise<void> {
     try {
+      // Check if thread is already posted before setting up polling
+      if (this.isAlreadyPosted()) {
+        console.log("✅ Post-match thread already posted. Skipping setup.");
+        return;
+      }
+
       // Setup a polling interval to check match status
       console.log(
         "⏳ Setting up post-match thread scheduling and match status polling..."
@@ -88,6 +121,14 @@ export class PostMatchScheduler extends BaseScheduler {
         zone: "utc",
       });
       const now = DateTime.now();
+
+      // Check if match has already ended (in case of bot restart after match completion)
+      const estimatedEndTime = this.getEstimatedEndTime();
+      if (estimatedEndTime && now > estimatedEndTime) {
+        console.log("🔍 Match likely already ended. Checking final status...");
+        await this.checkFinalStatusAndPost();
+        return;
+      }
 
       // Start checking the match status at kickoff time
       // If kickoff time is in the past, start checking immediately
@@ -119,8 +160,14 @@ export class PostMatchScheduler extends BaseScheduler {
 
   // Start polling for match status
   private startPollingMatchStatus(): void {
-    // Check status every 1 minute during the match
-    const checkInterval = 60_000; // 1 minute
+    // Check if thread is already posted before starting polling
+    if (this.isAlreadyPosted()) {
+      console.log("✅ Post-match thread already posted. Skipping polling.");
+      return;
+    }
+
+    // Check status every 2 minutes during the match (reduced from 1 minute to save API calls)
+    const checkInterval = 120_000; // 2 minutes
     let statusCheckCount = 0;
     let consecutiveErrors = 0;
 
@@ -135,6 +182,13 @@ export class PostMatchScheduler extends BaseScheduler {
 
     const intervalId = setInterval(async () => {
       try {
+        // Double-check if thread was already posted (in case of concurrent execution)
+        if (this.isAlreadyPosted()) {
+          console.log("✅ Post-match thread already posted. Stopping polling.");
+          clearInterval(intervalId);
+          return;
+        }
+
         statusCheckCount++;
         console.log(`📡 Checking match status (check #${statusCheckCount})...`);
         const status = await fetchMatchStatus(this.match.fixture.id);
@@ -161,6 +215,14 @@ export class PostMatchScheduler extends BaseScheduler {
           console.log("✅ Match has finished! Creating post-match thread...");
           clearInterval(intervalId);
 
+          // Final check before posting to prevent race conditions
+          if (this.isAlreadyPosted()) {
+            console.log(
+              "✅ Post-match thread already posted by another process. Skipping."
+            );
+            return;
+          }
+
           // Wait 2 minutes after the match ends before posting
           // This allows the API to update all the final statistics
           console.log(
@@ -168,6 +230,14 @@ export class PostMatchScheduler extends BaseScheduler {
           );
           setTimeout(async () => {
             try {
+              // Final check before posting
+              if (this.isAlreadyPosted()) {
+                console.log(
+                  "✅ Post-match thread already posted. Skipping delayed post."
+                );
+                return;
+              }
+
               const { title, body } = await this.formatContent();
               await this.postThread(title, body);
               this.markAsPosted();
@@ -183,8 +253,24 @@ export class PostMatchScheduler extends BaseScheduler {
           );
           clearInterval(intervalId);
 
+          // Final check before posting to prevent race conditions
+          if (this.isAlreadyPosted()) {
+            console.log(
+              "✅ Post-match thread already posted by another process. Skipping."
+            );
+            return;
+          }
+
           setTimeout(async () => {
             try {
+              // Final check before posting
+              if (this.isAlreadyPosted()) {
+                console.log(
+                  "✅ Post-match thread already posted. Skipping delayed post."
+                );
+                return;
+              }
+
               // Create a modified post-match thread that acknowledges the irregular ending
               const { title, body } = await this.formatContent(status);
               await this.postThread(title, body);
@@ -270,6 +356,14 @@ export class PostMatchScheduler extends BaseScheduler {
   // In case polling times out, make one final attempt to check status and post
   private async checkFinalStatusAndPost(): Promise<void> {
     try {
+      // Check if thread is already posted before making final attempt
+      if (this.isAlreadyPosted()) {
+        console.log(
+          "✅ Post-match thread already posted. Skipping final check."
+        );
+        return;
+      }
+
       console.log(
         "🔍 Making final check of match status after polling timeout..."
       );
@@ -287,6 +381,14 @@ export class PostMatchScheduler extends BaseScheduler {
         "INT",
       ];
       if (finishedStatuses.includes(status)) {
+        // Final check before posting to prevent race conditions
+        if (this.isAlreadyPosted()) {
+          console.log(
+            "✅ Post-match thread already posted by another process. Skipping final post."
+          );
+          return;
+        }
+
         console.log(
           `✅ Match has ended with status: ${status}. Creating post-match thread...`
         );

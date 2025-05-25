@@ -18,6 +18,7 @@ import {
   SIMULATION_SPEED,
 } from "../config/appConfig";
 import { DateTime } from "luxon";
+import { recordApiCall, canMakeApiCall } from "../utils/apiCallTracker";
 
 const HEADERS = {
   "x-rapidapi-key": RAPIDAPI_KEY,
@@ -79,8 +80,17 @@ export async function fetchNextMatch(retries = 3): Promise<any | null> {
     "🌐 [LIVE] Making API call to fetch next SC Internacional match..."
   );
 
+  // Check API limit before making call
+  if (!canMakeApiCall()) {
+    console.error(
+      "🚨 API call limit reached for today (100/100). Cannot fetch match data."
+    );
+    return null;
+  }
+
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
+      recordApiCall("/fixtures", "fetch next match");
       const response = await axios.get(`${API_BASE_URL}/fixtures`, {
         params: {
           team: TEAM_ID,
@@ -125,7 +135,16 @@ export async function fetchLineups(fixtureId: number) {
 
   console.log(`📡 Fetching lineups for fixture ID ${fixtureId}...`);
 
+  // Check API limit before making call
+  if (!canMakeApiCall()) {
+    console.error(
+      "🚨 API call limit reached for today (100/100). Cannot fetch lineups."
+    );
+    return [];
+  }
+
   try {
+    recordApiCall("/fixtures/lineups", "fetch lineups");
     const response = await axios.get(`${API_BASE_URL}/fixtures/lineups`, {
       params: { fixture: fixtureId },
       headers: HEADERS,
@@ -183,6 +202,19 @@ export async function fetchFinalMatchData(fixtureId: number) {
 
   console.log(`📡 Fetching final match data for fixture ID ${fixtureId}...`);
 
+  // Check API limit before making calls (this will make 3 calls)
+  if (!canMakeApiCall()) {
+    console.error(
+      "🚨 API call limit reached for today (100/100). Cannot fetch final match data."
+    );
+    throw new Error("API call limit reached");
+  }
+
+  // Record the API calls
+  recordApiCall("/fixtures", "fetch final match data");
+  recordApiCall("/fixtures/events", "fetch match events");
+  recordApiCall("/fixtures/statistics", "fetch match statistics");
+
   const [fixtureRes, eventsRes, statsRes] = await Promise.all([
     axios.get(`${API_BASE_URL}/fixtures`, {
       params: { id: fixtureId },
@@ -234,7 +266,16 @@ export async function fetchMatchStatus(fixtureId: number): Promise<string> {
 
   console.log(`📡 Checking match status for fixture ID ${fixtureId}...`);
 
+  // Check API limit before making call
+  if (!canMakeApiCall()) {
+    console.error(
+      "🚨 API call limit reached for today (100/100). Cannot check match status."
+    );
+    return "NS"; // Return "Not Started" as safe default
+  }
+
   try {
+    recordApiCall("/fixtures", "check match status");
     const response = await axios.get(`${API_BASE_URL}/fixtures`, {
       params: { id: fixtureId },
       headers: HEADERS,
@@ -324,6 +365,15 @@ export async function fetchLast5Matches(
     }
   }
 
+  // Check API limit before making call
+  if (!canMakeApiCall()) {
+    console.error(
+      "🚨 API call limit reached for today (100/100). Cannot fetch last 5 matches."
+    );
+    return [];
+  }
+
+  recordApiCall("/fixtures", `fetch last 5 matches for team ${teamId}`);
   const response = await axios.get(`${API_BASE_URL}/fixtures`, {
     params: {
       team: teamId,
