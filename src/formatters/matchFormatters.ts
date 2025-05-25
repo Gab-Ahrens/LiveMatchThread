@@ -94,9 +94,9 @@ export function formatLineups(lineups: any[]): string {
 
       return `
 **${team.team.name}**
-👔 Técnico: ${coach}  
-🔴 Titulares: ${starters}  
-⚪ Banco: ${subs}
+Técnico: ${coach}  
+Titulares: ${starters}  
+Banco: ${subs}
 `;
     })
     .join("\n\n");
@@ -155,11 +155,11 @@ export function formatLast5Results(matches: any[], teamId: number): string {
       const opponentScore = isHome ? awayScore : homeScore;
       const opponentName = isHome ? away.name : home.name;
 
-      let resultIcon = "➖ Empate";
-      if (teamScore > opponentScore) resultIcon = "✅ Vitória";
-      else if (teamScore < opponentScore) resultIcon = "❌ Derrota";
+      let resultText = "E";
+      if (teamScore > opponentScore) resultText = "V";
+      else if (teamScore < opponentScore) resultText = "D";
 
-      return `${resultIcon} contra ${opponentName} (${teamScore}x${opponentScore})`;
+      return `${resultText} - ${opponentName} (${teamScore}x${opponentScore})`;
     })
     .join("\n");
 }
@@ -180,27 +180,6 @@ export async function formatMatchThread(
     timeStyle: "short",
   });
 
-  const homeTeamId = teams.home.id;
-  const awayTeamId = teams.away.id;
-  const homeTeamName = teams.home.name;
-  const awayTeamName = teams.away.name;
-  const leagueId = league.id;
-  const season = league.season;
-
-  const last5Home = await fetchLast5Matches(homeTeamId, leagueId, season);
-  const last5Away = await fetchLast5Matches(awayTeamId, leagueId, season);
-
-  const homeResults = formatLast5Results(last5Home, homeTeamId);
-  const awayResults = formatLast5Results(last5Away, awayTeamId);
-
-  const last5Section = `
-📉 Últimos 5 jogos do ${homeTeamName} (${formatCompetition(league.name)})
-${homeResults}
-
-📉 Últimos 5 jogos do ${awayTeamName} (${formatCompetition(league.name)})
-${awayResults}
-`;
-
   let stadium = venue?.name ?? "Unknown Venue";
   if (stadium === "Estádio José Pinheiro Borda") {
     stadium = "Estádio Beira-Rio";
@@ -211,33 +190,89 @@ ${awayResults}
   const lineupSection = lineups
     ? formatLineups(lineups)
     : "Escalações indisponíveis no momento.";
-
-  console.log(`homeResults log`, homeResults);
-  console.log(`awayResults log`, awayResults);
   const threadBody = `
-## 🏆 ${formatCompetition(league.name)} - ${formatRound(league.round)}
+## ${formatCompetition(league.name)} - ${formatRound(league.round)}
 
-**${homeTeamName}** vs **${awayTeamName}**
+**${teams.home.name}** vs **${teams.away.name}**
 
-📍 *${stadium}, ${city}*  
-🕓 *Horário: ${kickoff} (Brasília)*  
-🧑‍⚖️ Árbitro: ${referee}
+**Local:** ${stadium}, ${city}  
+**Horário:** ${kickoff} (Brasília)  
+**Árbitro:** ${referee}
 
 ---
 
-👥 **Escalações**
+**Escalações**
 
 ${lineupSection}
 
 ---
 
-${last5Section}
-
-⚽️ Vamo Inter! ❤️
+Vamo Inter!
 
 ---
 
-^(*Esse thread foi criado automaticamente por um bot.*)
+^(*Thread criado automaticamente*)
+  `.trim();
+
+  return threadBody;
+}
+
+/**
+ * Formats the pre-match thread content with last 5 matches
+ */
+export async function formatPreMatchThread(match: any): Promise<string> {
+  const { fixture, teams, league } = match;
+  const { venue } = fixture;
+
+  const kickoff = new Date(fixture.date).toLocaleString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    dateStyle: "full",
+    timeStyle: "short",
+  });
+
+  const homeTeamId = teams.home.id;
+  const awayTeamId = teams.away.id;
+  const homeTeamName = teams.home.name;
+  const awayTeamName = teams.away.name;
+  const leagueId = league.id;
+  const season = league.season;
+
+  // Fetch last 5 matches for both teams
+  const last5Home = await fetchLast5Matches(homeTeamId, leagueId, season);
+  const last5Away = await fetchLast5Matches(awayTeamId, leagueId, season);
+
+  const homeResults = formatLast5Results(last5Home, homeTeamId);
+  const awayResults = formatLast5Results(last5Away, awayTeamId);
+
+  let stadium = venue?.name ?? "Unknown Venue";
+  if (stadium === "Estádio José Pinheiro Borda") {
+    stadium = "Estádio Beira-Rio";
+  }
+  const city = venue?.city ?? "Unknown City";
+
+  const threadBody = `
+## ${formatCompetition(league.name)} - ${formatRound(league.round)}
+
+**${homeTeamName}** vs **${awayTeamName}**
+
+**Local:** ${stadium}, ${city}  
+**Data:** ${kickoff} (Brasília)
+
+---
+
+**Últimos 5 jogos - ${homeTeamName}**
+${homeResults}
+
+**Últimos 5 jogos - ${awayTeamName}**
+${awayResults}
+
+---
+
+Vamo Inter!
+
+---
+
+^(*Thread criado automaticamente*)
   `.trim();
 
   return threadBody;

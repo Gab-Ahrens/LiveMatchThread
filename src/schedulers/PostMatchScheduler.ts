@@ -18,8 +18,8 @@ export class PostMatchScheduler extends BaseScheduler {
 
   // Preview the thread content
   async previewThreadContent(): Promise<void> {
-    console.log("\n📋 [PREVIEW] Post-Match Thread:");
-    console.log(`🔍 Using ${USE_MOCK_DATA ? "mock data 🧪" : "live data ☁️"}`);
+    console.log("\n[PREVIEW] Post-Match Thread:");
+    console.log(`Using ${USE_MOCK_DATA ? "mock data" : "live data"}`);
 
     // For preview, we'll create a simulated title since the match hasn't finished yet
     try {
@@ -58,8 +58,8 @@ export class PostMatchScheduler extends BaseScheduler {
       const estimatedEnd = this.getEstimatedEndTime();
       if (estimatedEnd) {
         console.log(
-          `🕒 Would be posted at: ${formatDateTimeForConsole(estimatedEnd)} ${
-            DRY_RUN ? "[DRY RUN 🚧]" : "[LIVE MODE 🚀]"
+          `Would be posted at: ${formatDateTimeForConsole(estimatedEnd)} ${
+            DRY_RUN ? "[DRY RUN]" : "[LIVE MODE]"
           } (after match ends)`
         );
       }
@@ -506,29 +506,29 @@ export class PostMatchScheduler extends BaseScheduler {
       const realAwayName = awayTeam.name.toUpperCase();
 
       const body = `
-## 📊 Resultado Final: ${competition} - ${round}
+## Resultado Final: ${competition} - ${round}
 ${specialNotice}
 **${scoreLine}**
 
-📍 *${venue.name}, ${venue.city}*  
-🕓 *Data: ${kickoff} (Brasília)*
+**Local:** ${venue.name}, ${venue.city}  
+**Data:** ${kickoff} (Brasília)
 
 ---
 
-### ⚽ Gols
+### Gols
 ${this.formatGoals(finalData)}
 
 ---
 
-### 📈 Estatísticas
+### Estatísticas
 ${this.formatStats(finalData, realHomeName, realAwayName)}
 
 ---
 
-⚽️ Vamo Inter! ❤️
+Vamo Inter!
 
 ---
-^(*Esse post foi criado automaticamente por um bot.*)
+^(*Thread criado automaticamente*)
 `.trim();
 
       return { title, body };
@@ -545,9 +545,7 @@ ${this.formatStats(finalData, realHomeName, realAwayName)}
     if (goals.length === 0) return "_Nenhum gol registrado._";
 
     return goals
-      .map(
-        (g: any) => `⚽️ ${g.team.name}: ${g.player.name} (${g.time.elapsed}')`
-      )
+      .map((g: any) => `${g.team.name}: ${g.player.name} (${g.time.elapsed}')`)
       .join("\n");
   }
 
@@ -599,9 +597,9 @@ ${this.formatStats(finalData, realHomeName, realAwayName)}
   // Post the thread
   private async postThread(title: string, body: string): Promise<void> {
     if (DRY_RUN) {
-      console.log("🚧 [DRY RUN] Post-match thread would be posted to Reddit");
+      console.log("[DRY RUN] Post-match thread would be posted to Reddit");
     } else {
-      console.log("🚀 Posting post-match thread!");
+      console.log("Posting post-match thread!");
       await postMatchThread(title, body);
     }
   }

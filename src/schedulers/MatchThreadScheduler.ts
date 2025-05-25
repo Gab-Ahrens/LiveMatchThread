@@ -21,20 +21,20 @@ export class MatchThreadScheduler extends BaseScheduler {
 
   // Preview the thread content
   async previewThreadContent(): Promise<void> {
-    console.log("\n📋 [PREVIEW] Match Thread:");
-    console.log(`🔍 Using ${USE_MOCK_DATA ? "mock data 🧪" : "live data ☁️"}`);
+    console.log("\n[PREVIEW] Match Thread:");
+    console.log(`Using ${USE_MOCK_DATA ? "mock data" : "live data"}`);
 
     // For preview, we'll try to get lineups, but it's okay if they're not available yet
     try {
       this.lineups = await this.fetchLineupsWithRetry(this.match.fixture.id);
       console.log(
         this.lineups && this.lineups.length > 0
-          ? "✅ Lineups available for preview"
-          : "ℹ️ Lineups not available yet for preview"
+          ? "Lineups available for preview"
+          : "Lineups not available yet for preview"
       );
     } catch (err) {
       console.log(
-        "ℹ️ Couldn't fetch lineups for preview (they may not be available yet)"
+        "Couldn't fetch lineups for preview (they may not be available yet)"
       );
     }
 
@@ -53,8 +53,8 @@ export class MatchThreadScheduler extends BaseScheduler {
     const postTimeUTC = matchDateUTC.minus({ minutes: 20 });
 
     console.log(
-      `🕒 Would be posted at: ${formatDateTimeForConsole(postTimeUTC)} ${
-        DRY_RUN ? "[DRY RUN 🚧]" : "[LIVE MODE 🚀]"
+      `Would be posted at: ${formatDateTimeForConsole(postTimeUTC)} ${
+        DRY_RUN ? "[DRY RUN]" : "[LIVE MODE]"
       }`
     );
     console.log("\n" + "=".repeat(80) + "\n");
@@ -71,7 +71,7 @@ export class MatchThreadScheduler extends BaseScheduler {
 
     // Don't schedule if already scheduled
     if (this.scheduledMatchId === matchId) {
-      console.log("✅ Match already scheduled.");
+      console.log("Match already scheduled.");
       return;
     }
 
@@ -80,7 +80,7 @@ export class MatchThreadScheduler extends BaseScheduler {
 
     // First, wait until time to fetch lineups
     if (DateTime.now() < lineupsAttemptTime) {
-      console.log("⏳ Waiting until 1 hour before kickoff to fetch lineups...");
+      console.log("Waiting until 1 hour before kickoff to fetch lineups...");
       console.log(
         `Will attempt to fetch lineups at: ${formatDateTimeForConsole(
           lineupsAttemptTime
@@ -92,7 +92,7 @@ export class MatchThreadScheduler extends BaseScheduler {
 
     // Now try to get lineups
     console.log(
-      "🔄 Attempting to fetch latest lineups (1 hour before kickoff)..."
+      "Attempting to fetch latest lineups (1 hour before kickoff)..."
     );
     this.lineups = await this.fetchLineupsWithRetry(matchId);
 
@@ -105,9 +105,7 @@ export class MatchThreadScheduler extends BaseScheduler {
 
     // One final attempt to get or update lineups right before posting
     // (Some lineups might be released very close to kickoff)
-    console.log(
-      "🔄 Final attempt to fetch or update lineups before posting..."
-    );
+    console.log("Final attempt to fetch or update lineups before posting...");
     const finalLineups = await this.fetchLineupsWithRetry(matchId);
 
     // If we got new lineups in the final attempt, update the body
@@ -116,7 +114,7 @@ export class MatchThreadScheduler extends BaseScheduler {
       finalLineups.length > 0 &&
       (!this.lineups || this.lineups.length === 0)
     ) {
-      console.log("✅ Got lineups in final attempt, updating thread content");
+      console.log("Got lineups in final attempt, updating thread content");
       this.lineups = finalLineups;
       this.body = await formatMatchThread(this.match, this.lineups);
     }
@@ -175,9 +173,9 @@ export class MatchThreadScheduler extends BaseScheduler {
   private async postThread(title: string, body: string): Promise<void> {
     if (DRY_RUN) {
       // In dry run mode, we've already shown the preview, so just show a brief message
-      console.log("🚧 [DRY RUN] Match thread would be posted to Reddit");
+      console.log("[DRY RUN] Match thread would be posted to Reddit");
     } else {
-      console.log("🚀 Posting match thread!");
+      console.log("Posting match thread!");
       await postMatchThread(title, body);
     }
   }

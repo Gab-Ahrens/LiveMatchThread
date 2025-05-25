@@ -2,7 +2,10 @@ import { BaseScheduler } from "./BaseScheduler";
 import { DateTime } from "luxon";
 import { postMatchThread } from "../reddit/redditClient";
 import { DRY_RUN } from "../config/appConfig";
-import { formatCompetition } from "../formatters/matchFormatters";
+import {
+  formatCompetition,
+  formatPreMatchThread,
+} from "../formatters/matchFormatters";
 import {
   formatThreadTime,
   formatDateTimeForConsole,
@@ -16,7 +19,7 @@ export class PreMatchScheduler extends BaseScheduler {
   }
 
   // Generate thread content
-  private formatThreadContent() {
+  private async formatThreadContent() {
     // Get home and away team names
     const homeTeam = this.match.teams.home;
     const awayTeam = this.match.teams.away;
@@ -36,19 +39,14 @@ export class PreMatchScheduler extends BaseScheduler {
     // If we're using a nickname, log it for visibility
     if (homeName !== homeTeam.name.toUpperCase()) {
       console.log(
-        `🎭 Using nickname for opponent: ${homeName} (originally ${homeTeam.name})`
+        `Using nickname for opponent: ${homeName} (originally ${homeTeam.name})`
       );
     }
     if (awayName !== awayTeam.name.toUpperCase()) {
       console.log(
-        `🎭 Using nickname for opponent: ${awayName} (originally ${awayTeam.name})`
+        `Using nickname for opponent: ${awayName} (originally ${awayTeam.name})`
       );
     }
-
-    const venue = this.match.fixture.venue;
-
-    // Format the kickoff time in Brasilia time zone for thread content
-    const kickoff = formatThreadTime(this.match.fixture.date);
 
     const competition = this.formatCompetitionName(
       this.match.league?.name ?? ""
@@ -56,27 +54,15 @@ export class PreMatchScheduler extends BaseScheduler {
     const round = this.formatOrdinalRound(this.match.league?.round || "");
 
     const title = `[PRÉ-JOGO] | ${competition} | ${homeName} X ${awayName} | ${round}`;
-    const body = `
-## 📝 Informações da Partida
-
-🏟️ *${venue.name}, ${venue.city}*  
-🕓 *Data: ${kickoff} (Brasília)*
-
----
-
-⚽️ Vamo Inter! ❤️
-
----
-^(*Esse post foi criado automaticamente por um bot.*)
-    `.trim();
+    const body = await formatPreMatchThread(this.match);
 
     return { title, body };
   }
 
   // Preview the thread content
   async previewThreadContent(): Promise<void> {
-    console.log("\n📋 [PREVIEW] Pre-Match Thread:");
-    const content = this.formatThreadContent();
+    console.log("\n[PREVIEW] Pre-Match Thread:");
+    const content = await this.formatThreadContent();
     console.log(`Title: ${content.title}`);
     console.log(`Body:\n${content.body}`);
 
@@ -87,8 +73,8 @@ export class PreMatchScheduler extends BaseScheduler {
     const postAt = matchStart.minus({ hours: 24 });
 
     console.log(
-      `\n🕒 Would be posted at: ${formatDateTimeForConsole(postAt)} ${
-        DRY_RUN ? "[DRY RUN 🚧]" : "[LIVE MODE 🚀]"
+      `\nWould be posted at: ${formatDateTimeForConsole(postAt)} ${
+        DRY_RUN ? "[DRY RUN]" : "[LIVE MODE]"
       }`
     );
     console.log("\n" + "=".repeat(80) + "\n");
@@ -105,7 +91,7 @@ export class PreMatchScheduler extends BaseScheduler {
     await this.waitUntil(postAt);
 
     // Post thread logic
-    const threadContent = this.formatThreadContent();
+    const threadContent = await this.formatThreadContent();
     await this.postThread(threadContent.title, threadContent.body);
 
     // Mark as posted
@@ -115,9 +101,9 @@ export class PreMatchScheduler extends BaseScheduler {
   private async postThread(title: string, body: string) {
     if (DRY_RUN) {
       // In dry run mode, we've already shown the preview, so just show a brief message
-      console.log("🚧 [DRY RUN] Pre-match thread would be posted to Reddit");
+      console.log("[DRY RUN] Pre-match thread would be posted to Reddit");
     } else {
-      console.log("🚀 Posting pre-match thread!");
+      console.log("Posting pre-match thread!");
       await postMatchThread(title, body);
     }
   }
