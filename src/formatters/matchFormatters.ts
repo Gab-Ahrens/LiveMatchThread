@@ -63,7 +63,7 @@ export function formatRound(round: string): string {
 }
 
 /**
- * Formats lineup data into a readable format
+ * Formats lineup data into a readable format with team colors
  */
 export function formatLineups(lineups: any[]): string {
   if (!lineups || lineups.length === 0)
@@ -92,8 +92,11 @@ export function formatLineups(lineups: any[]): string {
           )
           .join(", ") || "N/A";
 
+      // Get team colors for styling
+      const colorIndicator = getTeamColorIndicator(team.team.colors);
+
       return `
-**${team.team.name}**
+**${colorIndicator}${team.team.name}**
 Técnico: ${coach}  
 Titulares: ${starters}  
 Banco: ${subs}
@@ -142,10 +145,61 @@ export function formatMatchTitle(match: any): string {
 }
 
 /**
- * Formats the last 5 results for a team
+ * Gets a color indicator emoji based on team colors
+ */
+function getTeamColorIndicator(teamColors: any): string {
+  if (!teamColors?.player?.primary) return "";
+
+  const primaryColor = teamColors.player.primary.toLowerCase();
+
+  if (primaryColor === "ff0000" || primaryColor.includes("red")) {
+    return "🔴 ";
+  } else if (primaryColor === "000000" || primaryColor.includes("black")) {
+    return "⚫ ";
+  } else if (
+    primaryColor.includes("ffffff") ||
+    primaryColor.includes("white")
+  ) {
+    return "⚪ ";
+  } else if (
+    primaryColor.includes("00ff00") ||
+    primaryColor.includes("green")
+  ) {
+    return "🟢 ";
+  } else if (primaryColor.includes("0000ff") || primaryColor.includes("blue")) {
+    return "🔵 ";
+  } else if (
+    primaryColor.includes("ffff00") ||
+    primaryColor.includes("yellow")
+  ) {
+    return "🟡 ";
+  } else {
+    return "🔘 ";
+  }
+}
+
+/**
+ * Formats the last 5 results for a team with color-coded results
  */
 export function formatLast5Results(matches: any[], teamId: number): string {
+  if (!Array.isArray(matches) || matches.length === 0) {
+    return "_Nenhum resultado recente disponível._";
+  }
+
   return matches
+    .filter((match) => {
+      // Filter out matches with invalid data
+      return (
+        match &&
+        match.teams &&
+        match.teams.home &&
+        match.teams.away &&
+        match.score &&
+        match.score.fulltime &&
+        match.score.fulltime.home !== null &&
+        match.score.fulltime.away !== null
+      );
+    })
     .map((match) => {
       const { home, away } = match.teams;
       const { home: homeScore, away: awayScore } = match.score.fulltime;
@@ -153,13 +207,19 @@ export function formatLast5Results(matches: any[], teamId: number): string {
       const isHome = home.id === teamId;
       const teamScore = isHome ? homeScore : awayScore;
       const opponentScore = isHome ? awayScore : homeScore;
-      const opponentName = isHome ? away.name : home.name;
+      const opponentName = isHome
+        ? away.name || "Adversário"
+        : home.name || "Adversário";
 
-      let resultText = "E";
-      if (teamScore > opponentScore) resultText = "V";
-      else if (teamScore < opponentScore) resultText = "D";
+      // Color-coded result indicators
+      let resultIndicator = "🟡 E"; // Yellow for draw
+      if (teamScore > opponentScore) {
+        resultIndicator = "🟢 V"; // Green for victory
+      } else if (teamScore < opponentScore) {
+        resultIndicator = "🔴 D"; // Red for defeat
+      }
 
-      return `${resultText} - ${opponentName} (${teamScore}x${opponentScore})`;
+      return `${resultIndicator} - ${opponentName} (${teamScore}x${opponentScore})`;
     })
     .join("\n");
 }
@@ -171,6 +231,10 @@ export async function formatMatchThread(
   match: any,
   lineups?: any
 ): Promise<string> {
+  if (!match || !match.fixture || !match.teams || !match.league) {
+    throw new Error("Invalid match data provided to formatMatchThread");
+  }
+
   const { fixture, teams, league } = match;
   const { venue } = fixture;
 
@@ -180,12 +244,12 @@ export async function formatMatchThread(
     timeStyle: "short",
   });
 
-  let stadium = venue?.name ?? "Unknown Venue";
+  let stadium = venue?.name ?? "Local a definir";
   if (stadium === "Estádio José Pinheiro Borda") {
     stadium = "Estádio Beira-Rio";
   }
-  const city = venue?.city ?? "Unknown City";
-  const referee = fixture.referee || "Desconhecido";
+  const city = venue?.city ?? "Cidade a definir";
+  const referee = fixture.referee || "A definir";
 
   const lineupSection = lineups
     ? formatLineups(lineups)
@@ -221,6 +285,10 @@ Vamo Inter!
  * Formats the pre-match thread content with last 5 matches
  */
 export async function formatPreMatchThread(match: any): Promise<string> {
+  if (!match || !match.fixture || !match.teams || !match.league) {
+    throw new Error("Invalid match data provided to formatPreMatchThread");
+  }
+
   const { fixture, teams, league } = match;
   const { venue } = fixture;
 
@@ -232,23 +300,30 @@ export async function formatPreMatchThread(match: any): Promise<string> {
 
   const homeTeamId = teams.home.id;
   const awayTeamId = teams.away.id;
-  const homeTeamName = teams.home.name;
-  const awayTeamName = teams.away.name;
+  const homeTeamName = teams.home.name || "Time da casa";
+  const awayTeamName = teams.away.name || "Time visitante";
   const leagueId = league.id;
   const season = league.season;
 
   // Fetch last 5 matches for both teams
-  const last5Home = await fetchLast5Matches(homeTeamId, leagueId, season);
-  const last5Away = await fetchLast5Matches(awayTeamId, leagueId, season);
+  let last5Home: any[] = [];
+  let last5Away: any[] = [];
+
+  try {
+    last5Home = (await fetchLast5Matches(homeTeamId, leagueId, season)) || [];
+    last5Away = (await fetchLast5Matches(awayTeamId, leagueId, season)) || [];
+  } catch (error) {
+    console.warn("⚠️ Error fetching last 5 matches:", error);
+  }
 
   const homeResults = formatLast5Results(last5Home, homeTeamId);
   const awayResults = formatLast5Results(last5Away, awayTeamId);
 
-  let stadium = venue?.name ?? "Unknown Venue";
+  let stadium = venue?.name ?? "Local a definir";
   if (stadium === "Estádio José Pinheiro Borda") {
     stadium = "Estádio Beira-Rio";
   }
-  const city = venue?.city ?? "Unknown City";
+  const city = venue?.city ?? "Cidade a definir";
 
   const threadBody = `
 ## ${formatCompetition(league.name)} - ${formatRound(league.round)}

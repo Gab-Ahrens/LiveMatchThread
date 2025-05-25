@@ -228,23 +228,26 @@ export class PostMatchScheduler extends BaseScheduler {
           console.log(
             "⏱️ Waiting 2 minutes for final match data to be available..."
           );
-          setTimeout(async () => {
-            try {
-              // Final check before posting
-              if (this.isAlreadyPosted()) {
-                console.log(
-                  "✅ Post-match thread already posted. Skipping delayed post."
-                );
-                return;
-              }
+          setTimeout(
+            async () => {
+              try {
+                // Final check before posting
+                if (this.isAlreadyPosted()) {
+                  console.log(
+                    "✅ Post-match thread already posted. Skipping delayed post."
+                  );
+                  return;
+                }
 
-              const { title, body } = await this.formatContent();
-              await this.postThread(title, body);
-              this.markAsPosted();
-            } catch (postError) {
-              console.error("❌ Error posting post-match thread:", postError);
-            }
-          }, 2 * 60 * 1000);
+                const { title, body } = await this.formatContent();
+                await this.postThread(title, body);
+                this.markAsPosted();
+              } catch (postError) {
+                console.error("❌ Error posting post-match thread:", postError);
+              }
+            },
+            2 * 60 * 1000
+          );
         }
         // Match has ended irregularly
         else if (irregularEndingStatuses.includes(status)) {
@@ -261,27 +264,30 @@ export class PostMatchScheduler extends BaseScheduler {
             return;
           }
 
-          setTimeout(async () => {
-            try {
-              // Final check before posting
-              if (this.isAlreadyPosted()) {
-                console.log(
-                  "✅ Post-match thread already posted. Skipping delayed post."
-                );
-                return;
-              }
+          setTimeout(
+            async () => {
+              try {
+                // Final check before posting
+                if (this.isAlreadyPosted()) {
+                  console.log(
+                    "✅ Post-match thread already posted. Skipping delayed post."
+                  );
+                  return;
+                }
 
-              // Create a modified post-match thread that acknowledges the irregular ending
-              const { title, body } = await this.formatContent(status);
-              await this.postThread(title, body);
-              this.markAsPosted();
-            } catch (postError) {
-              console.error(
-                "❌ Error posting post-match thread for irregular ending:",
-                postError
-              );
-            }
-          }, 2 * 60 * 1000);
+                // Create a modified post-match thread that acknowledges the irregular ending
+                const { title, body } = await this.formatContent(status);
+                await this.postThread(title, body);
+                this.markAsPosted();
+              } catch (postError) {
+                console.error(
+                  "❌ Error posting post-match thread for irregular ending:",
+                  postError
+                );
+              }
+            },
+            2 * 60 * 1000
+          );
         }
         // Match hasn't started or is scheduled
         else if (preMatchStatuses.includes(status)) {
@@ -541,11 +547,27 @@ Vamo Inter!
   // Helper method to format goals
   private formatGoals(finalData: any): string {
     const events = finalData.events || [];
-    const goals = events.filter((e: any) => e.type === "Goal");
+
+    if (!Array.isArray(events)) {
+      console.warn("⚠️ Events data is not an array:", events);
+      return "_Dados de eventos inválidos._";
+    }
+
+    const goals = events.filter((e: any) => {
+      return e && e.type === "Goal" && e.team && e.player && e.time;
+    });
+
     if (goals.length === 0) return "_Nenhum gol registrado._";
 
     return goals
-      .map((g: any) => `${g.team.name}: ${g.player.name} (${g.time.elapsed}')`)
+      .map((g: any) => {
+        const teamName = g.team?.name || "Time desconhecido";
+        const playerName = g.player?.name || "Jogador desconhecido";
+        const minute = g.time?.elapsed || "?";
+        const extraTime = g.time?.extra ? `+${g.time.extra}` : "";
+
+        return `${teamName}: ${playerName} (${minute}${extraTime}')`;
+      })
       .join("\n");
   }
 
@@ -556,9 +578,18 @@ Vamo Inter!
     awayName: string
   ): string {
     const stats = finalData.statistics;
-    if (!stats || stats.length < 2) return "_Estatísticas indisponíveis._";
+    if (!stats || !Array.isArray(stats) || stats.length < 2) {
+      console.warn("⚠️ Statistics data is invalid or incomplete:", stats);
+      return "_Estatísticas indisponíveis._";
+    }
 
     const [homeStats, awayStats] = stats;
+
+    if (!homeStats?.statistics || !awayStats?.statistics) {
+      console.warn("⚠️ Team statistics data is missing");
+      return "_Estatísticas indisponíveis._";
+    }
+
     const lines = [
       `| Estatística | ${homeName} | ${awayName} |`,
       "|-------------|------------------|------------------|",
@@ -582,13 +613,24 @@ Vamo Inter!
       "Passes accurate": "Passes Certos",
       "Passes %": "Precisão de Passes",
       "Expected goals": "Expected Goals (xG)",
+      expected_goals: "Expected Goals (xG)",
     };
 
     for (let i = 0; i < homeStats.statistics.length; i++) {
       const stat = homeStats.statistics[i];
       const awayStat = awayStats.statistics[i];
+
+      if (!stat || !stat.type) continue;
+
       const statName = translationMap[stat.type] || stat.type;
-      lines.push(`| ${statName} | ${stat.value} | ${awayStat?.value ?? "-"} |`);
+      const homeValue =
+        stat.value !== null && stat.value !== undefined ? stat.value : "-";
+      const awayValue =
+        awayStat?.value !== null && awayStat?.value !== undefined
+          ? awayStat.value
+          : "-";
+
+      lines.push(`| ${statName} | ${homeValue} | ${awayValue} |`);
     }
 
     return lines.join("\n");
