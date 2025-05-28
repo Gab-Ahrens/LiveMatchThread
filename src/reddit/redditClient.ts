@@ -23,9 +23,13 @@ const reddit = new snoowrap({
 });
 
 /**
- * Posts a new thread to Reddit
+ * Posts a new thread to Reddit with optional flair
  */
-export async function postMatchThread(title: string, body: string) {
+export async function postMatchThread(
+  title: string,
+  body: string,
+  flair?: string
+) {
   try {
     const options = {
       subredditName: REDDIT_SUBREDDIT,
@@ -40,11 +44,30 @@ export async function postMatchThread(title: string, body: string) {
       );
       console.log("Title:", title);
       console.log("Body:", body);
+      if (flair) {
+        console.log("Flair:", flair);
+      }
       return;
     }
 
     const submission = await (reddit as any).submitSelfpost(options);
-    console.log(`✅ Match thread posted: ${submission.url}`);
+
+    // Apply flair if provided
+    if (flair) {
+      try {
+        await submission.selectFlair({ flair_template_id: null, text: flair });
+        console.log(
+          `✅ Match thread posted with flair "${flair}": ${submission.url}`
+        );
+      } catch (flairError) {
+        console.warn(`⚠️ Failed to apply flair "${flair}":`, flairError);
+        console.log(
+          `✅ Match thread posted (without flair): ${submission.url}`
+        );
+      }
+    } else {
+      console.log(`✅ Match thread posted: ${submission.url}`);
+    }
   } catch (error) {
     console.error("❌ Failed to post match thread:", error);
   }

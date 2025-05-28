@@ -176,7 +176,7 @@ export class MatchThreadScheduler extends BaseScheduler {
       console.log("[DRY RUN] Match thread would be posted to Reddit");
     } else {
       console.log("Posting match thread!");
-      await postMatchThread(title, body);
+      await postMatchThread(title, body, "Jogo");
     }
   }
 }

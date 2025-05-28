@@ -61,7 +61,7 @@ async function createMatchThread() {
     console.log("🚧 [DRY RUN] Match thread would be posted with title:", title);
     console.log("🚧 [DRY RUN] Body preview:", body.substring(0, 200) + "...");
   } else {
-    await postMatchThread(title, body);
+    await postMatchThread(title, body, "Jogo");
     console.log("✅ Match thread posted successfully!");
 
     // Mark thread as posted

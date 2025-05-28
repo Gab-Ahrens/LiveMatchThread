@@ -104,7 +104,7 @@ export class PreMatchScheduler extends BaseScheduler {
       console.log("[DRY RUN] Pre-match thread would be posted to Reddit");
     } else {
       console.log("Posting pre-match thread!");
-      await postMatchThread(title, body);
+      await postMatchThread(title, body, "Pré-Jogo");
     }
   }
 

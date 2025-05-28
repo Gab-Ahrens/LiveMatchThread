@@ -642,7 +642,7 @@ Vamo Inter!
       console.log("[DRY RUN] Post-match thread would be posted to Reddit");
     } else {
       console.log("Posting post-match thread!");
-      await postMatchThread(title, body);
+      await postMatchThread(title, body, "Pós-Jogo");
     }
   }
 
