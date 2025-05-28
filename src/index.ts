@@ -1,7 +1,11 @@
 /**
  * Bot Entry Point
  */
-import { fetchNextMatch } from "./api/apiClient";
+import {
+  fetchNextMatch,
+  fetchLiveMatch,
+  fetchRecentlyFinishedMatch,
+} from "./api/apiClient";
 import { DRY_RUN, USE_MOCK_DATA } from "./config/appConfig";
 import { PreMatchScheduler } from "./schedulers/PreMatchScheduler";
 import { MatchThreadScheduler } from "./schedulers/MatchThreadScheduler";
@@ -13,6 +17,7 @@ import {
 } from "./utils/refreshState";
 import { formatConsoleTime, formatDateTimeForConsole } from "./utils/dateUtils";
 import { DateTime } from "luxon";
+import { isThreadPosted } from "./utils/threadState";
 
 // Global variables to track active schedulers
 let preMatchScheduler: PreMatchScheduler | null = null;
@@ -39,7 +44,70 @@ export async function startAllSchedulers() {
     console.log(`🔄 Fetching fresh match data (refresh needed)...`);
   }
 
-  // Fetch the next match
+  // First, check for any live/ongoing Internacional matches
+  console.log("🔍 Checking for live Internacional matches...");
+  const liveMatch = await fetchLiveMatch();
+
+  if (liveMatch) {
+    console.log(
+      `🔴 Found live match: ${liveMatch.teams.home.name} vs ${
+        liveMatch.teams.away.name
+      } (${formatDateTimeForConsole(DateTime.fromISO(liveMatch.fixture.date))})`
+    );
+
+    // Create a post-match scheduler for the live match
+    console.log("⚽ Setting up post-match thread scheduler for live match...");
+    const livePostMatchScheduler = new PostMatchScheduler(liveMatch);
+
+    // Start the post-match scheduler which will handle polling and thread creation
+    await livePostMatchScheduler.start();
+
+    console.log("✅ Live match post-match scheduler started!");
+  } else {
+    // If no live match, check for recently finished matches that might need post-match threads
+    console.log("🔍 Checking for recently finished Internacional matches...");
+    const recentMatch = await fetchRecentlyFinishedMatch();
+
+    if (recentMatch) {
+      // Check if post-match thread was already posted
+      const matchId = recentMatch.fixture.id;
+      if (!isThreadPosted(matchId, "postMatchPosted")) {
+        console.log(
+          `🏁 Found recently finished match without post-match thread: ${recentMatch.teams.home.name} vs ${
+            recentMatch.teams.away.name
+          }`
+        );
+
+        // Create and immediately trigger post-match thread creation
+        console.log(
+          "📝 Creating post-match thread for recently finished match..."
+        );
+        const recentPostMatchScheduler = new PostMatchScheduler(recentMatch);
+
+        // Preview the thread content
+        await recentPostMatchScheduler.previewThreadContent();
+
+        // Try to create the post-match thread immediately since the match already finished
+        try {
+          await recentPostMatchScheduler.createPostMatchThreadNow();
+          console.log(
+            "✅ Post-match thread created for recently finished match!"
+          );
+        } catch (error) {
+          console.error(
+            "❌ Error creating post-match thread for recently finished match:",
+            error
+          );
+        }
+      } else {
+        console.log(
+          "✅ Recently finished match already has a post-match thread."
+        );
+      }
+    }
+  }
+
+  // Fetch the next upcoming match for regular scheduling
   const match = await fetchNextMatch();
 
   if (!match) {
@@ -59,13 +127,13 @@ export async function startAllSchedulers() {
     } (${formatDateTimeForConsole(matchDateTime)})`
   );
 
-  // Initialize all schedulers first
+  // Initialize all schedulers for the next match
   preMatchScheduler = new PreMatchScheduler(match);
   matchThreadScheduler = new MatchThreadScheduler(match);
   postMatchScheduler = new PostMatchScheduler(match);
 
   console.log(
-    "\n🔍 Previewing all threads that will be created for this match:"
+    "\n🔍 Previewing all threads that will be created for the next match:"
   );
 
   // Start each scheduler in sequence

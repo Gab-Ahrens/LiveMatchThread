@@ -385,3 +385,150 @@ export async function fetchLast5Matches(
   });
   return response.data.response;
 }
+
+/**
+ * Fetches live/ongoing matches for SC Internacional
+ */
+export async function fetchLiveMatch(retries = 3): Promise<any | null> {
+  if (USE_MOCK_DATA) {
+    console.log("🧪 Using mock data - no live match simulation available.");
+    return null;
+  }
+
+  console.log(
+    "🌐 [LIVE] Making API call to fetch live SC Internacional match..."
+  );
+
+  // Check API limit before making call
+  if (!canMakeApiCall()) {
+    console.error(
+      "🚨 API call limit reached for today (100/100). Cannot fetch live match data."
+    );
+    return null;
+  }
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      recordApiCall("/fixtures", "fetch live match");
+      const response = await axios.get(`${API_BASE_URL}/fixtures`, {
+        params: {
+          team: TEAM_ID,
+          season: SEASON,
+          live: "all", // Get all live matches for the team
+        },
+        headers: HEADERS,
+      });
+
+      const matches = response.data.response;
+
+      if (!matches || matches.length === 0) {
+        console.log("⚠️ No live match found for Internacional.");
+        return null;
+      }
+
+      // Return the first live match (there should typically be only one)
+      const liveMatch = matches[0];
+      console.log(
+        `🔴 Found live match: ${liveMatch.teams.home.name} vs ${liveMatch.teams.away.name} (Status: ${liveMatch.fixture.status.short})`
+      );
+      return liveMatch;
+    } catch (error: any) {
+      if (error.response?.status === 429) {
+        console.warn(
+          `⚠️ Rate limit hit (429). Attempt ${attempt} of ${retries}. Retrying in 10s...`
+        );
+        await wait(10_000);
+      } else {
+        console.error("❌ Failed to fetch live match from API:", error.message);
+        break;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Fetches recently finished matches for SC Internacional (last 24 hours)
+ */
+export async function fetchRecentlyFinishedMatch(
+  retries = 3
+): Promise<any | null> {
+  if (USE_MOCK_DATA) {
+    console.log(
+      "🧪 Using mock data - no recently finished match simulation available."
+    );
+    return null;
+  }
+
+  console.log(
+    "🌐 [LIVE] Making API call to fetch recently finished SC Internacional matches..."
+  );
+
+  // Check API limit before making call
+  if (!canMakeApiCall()) {
+    console.error(
+      "🚨 API call limit reached for today (100/100). Cannot fetch recently finished match data."
+    );
+    return null;
+  }
+
+  const yesterday = DateTime.now().minus({ days: 1 }).toFormat("yyyy-MM-dd");
+  const today = DateTime.now().toFormat("yyyy-MM-dd");
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      recordApiCall("/fixtures", "fetch recently finished match");
+      const response = await axios.get(`${API_BASE_URL}/fixtures`, {
+        params: {
+          team: TEAM_ID,
+          season: SEASON,
+          from: yesterday,
+          to: today,
+          status: "FT-AET-PEN", // Finished statuses
+        },
+        headers: HEADERS,
+      });
+
+      const matches = response.data.response;
+
+      if (!matches || matches.length === 0) {
+        console.log("⚠️ No recently finished matches found for Internacional.");
+        return null;
+      }
+
+      // Get the most recent finished match
+      const recentMatch = matches[matches.length - 1];
+      const matchDate = DateTime.fromISO(recentMatch.fixture.date);
+      const hoursAgo = DateTime.now().diff(matchDate, "hours").hours;
+
+      // Only consider matches that finished within the last 6 hours
+      if (hoursAgo <= 6) {
+        console.log(
+          `🏁 Found recently finished match: ${recentMatch.teams.home.name} vs ${recentMatch.teams.away.name} (Finished ${hoursAgo.toFixed(1)} hours ago)`
+        );
+        return recentMatch;
+      } else {
+        console.log(
+          `⚠️ Most recent match finished ${hoursAgo.toFixed(1)} hours ago (too long ago).`
+        );
+        return null;
+      }
+    } catch (error: any) {
+      if (error.response?.status === 429) {
+        console.warn(
+          `⚠️ Rate limit hit (429). Attempt ${attempt} of ${retries}. Retrying in 10s...`
+        );
+        await wait(10_000);
+      } else {
+        console.error(
+          "❌ Failed to fetch recently finished match from API:",
+          error.message
+        );
+        break;
+      }
+    }
+  }
+
+  return null;
+}

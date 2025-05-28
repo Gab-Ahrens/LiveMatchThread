@@ -654,4 +654,25 @@ Vamo Inter!
     if (group) return `GRUPO ${group[1]}`;
     return round.toUpperCase();
   }
+
+  // Public method to immediately create post-match thread for finished matches
+  async createPostMatchThreadNow(): Promise<void> {
+    try {
+      console.log(
+        "🔍 Checking if match has finished and creating post-match thread..."
+      );
+
+      // Check if thread is already posted
+      if (this.isAlreadyPosted()) {
+        console.log("✅ Post-match thread already posted. Skipping.");
+        return;
+      }
+
+      // Use the private method to check status and post
+      await this.checkFinalStatusAndPost();
+    } catch (error) {
+      console.error("❌ Error creating post-match thread immediately:", error);
+      throw error;
+    }
+  }
 }
