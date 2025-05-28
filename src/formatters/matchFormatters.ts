@@ -221,7 +221,7 @@ export function formatLast5Results(matches: any[], teamId: number): string {
 
       return `${resultIndicator} - ${opponentName} (${teamScore}x${opponentScore})`;
     })
-    .join("\n");
+    .join("  \n"); // Two spaces before \n creates proper line breaks in markdown
 }
 
 /**
