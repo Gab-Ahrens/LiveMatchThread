@@ -385,3 +385,151 @@ export async function fetchLast5Matches(
   });
   return response.data.response;
 }
+
+/**
+ * Fetches any live/ongoing Internacional matches
+ */
+export async function fetchLiveMatch(): Promise<any | null> {
+  if (USE_MOCK_DATA) {
+    console.log("🧪 Using mock data for live match check.");
+    // In mock mode, we can simulate a live match by checking if the mock match is in progress
+    const mockMatch = readMockData(MOCK_FILES.match);
+    if (!mockMatch) return null;
+
+    // Check if the mock match should be considered "live" based on current time
+    const matchTime = DateTime.fromISO(mockMatch.fixture.date);
+    const now = DateTime.now();
+    const diffMinutes = now.diff(matchTime, "minutes").minutes;
+
+    // Consider it live if it's between kickoff and 2 hours after
+    if (diffMinutes >= 0 && diffMinutes <= 120) {
+      console.log("🧪 Mock match is considered live");
+      return mockMatch;
+    }
+
+    return null;
+  }
+
+  console.log("🌐 [LIVE] Checking for live Internacional matches...");
+
+  // Check API limit before making call
+  if (!canMakeApiCall()) {
+    console.error(
+      "🚨 API call limit reached for today (100/100). Cannot check for live matches."
+    );
+    return null;
+  }
+
+  try {
+    recordApiCall("/fixtures", "check for live matches");
+    const response = await axios.get(`${API_BASE_URL}/fixtures`, {
+      params: {
+        team: TEAM_ID,
+        season: SEASON,
+        live: "all", // Get all live matches
+      },
+      headers: HEADERS,
+    });
+
+    const liveMatches = response.data.response;
+
+    if (!liveMatches || liveMatches.length === 0) {
+      console.log("No live Internacional matches found.");
+      return null;
+    }
+
+    // Return the first live match (there should typically only be one)
+    console.log(`Found ${liveMatches.length} live Internacional match(es)`);
+    return liveMatches[0];
+  } catch (error: any) {
+    console.error("❌ Failed to fetch live matches:", error.message);
+    return null;
+  }
+}
+
+/**
+ * Fetches recently finished Internacional matches (within last 4 hours)
+ */
+export async function fetchRecentlyFinishedMatch(): Promise<any | null> {
+  if (USE_MOCK_DATA) {
+    console.log("🧪 Using mock data for recently finished match check.");
+    // In mock mode, simulate a recently finished match
+    const mockMatch = readMockData(MOCK_FILES.match);
+    if (!mockMatch) return null;
+
+    // Check if the mock match should be considered "recently finished"
+    const matchTime = DateTime.fromISO(mockMatch.fixture.date);
+    const now = DateTime.now();
+    const diffHours = now.diff(matchTime, "hours").hours;
+
+    // Consider it recently finished if it ended 2-4 hours ago
+    if (diffHours >= 2 && diffHours <= 4) {
+      console.log("🧪 Mock match is considered recently finished");
+      // Set the status to finished for the mock
+      return {
+        ...mockMatch,
+        fixture: {
+          ...mockMatch.fixture,
+          status: { short: "FT", long: "Match Finished" },
+        },
+      };
+    }
+
+    return null;
+  }
+
+  console.log(
+    "🌐 [LIVE] Checking for recently finished Internacional matches..."
+  );
+
+  // Check API limit before making call
+  if (!canMakeApiCall()) {
+    console.error(
+      "🚨 API call limit reached for today (100/100). Cannot check for recently finished matches."
+    );
+    return null;
+  }
+
+  try {
+    recordApiCall("/fixtures", "check for recently finished matches");
+
+    // Get matches from the last 4 hours
+    const fourHoursAgo = DateTime.now().minus({ hours: 4 }).toISODate();
+    const now = DateTime.now().toISODate();
+
+    const response = await axios.get(`${API_BASE_URL}/fixtures`, {
+      params: {
+        team: TEAM_ID,
+        season: SEASON,
+        from: fourHoursAgo,
+        to: now,
+        status: "FT-AET-PEN", // Finished statuses
+      },
+      headers: HEADERS,
+    });
+
+    const finishedMatches = response.data.response;
+
+    if (!finishedMatches || finishedMatches.length === 0) {
+      console.log("No recently finished Internacional matches found.");
+      return null;
+    }
+
+    // Return the most recent finished match
+    const mostRecent = finishedMatches.sort(
+      (a: any, b: any) =>
+        new Date(b.fixture.date).getTime() - new Date(a.fixture.date).getTime()
+    )[0];
+
+    console.log(
+      `Found recently finished match: ${mostRecent.teams.home.name} vs ${mostRecent.teams.away.name}`
+    );
+    return mostRecent;
+  } catch (error: any) {
+    console.error(
+      "❌ Failed to fetch recently finished matches:",
+      error.message
+    );
+    return null;
+  }
+}
