@@ -51,7 +51,10 @@ export class PreMatchScheduler extends BaseScheduler {
     const competition = this.formatCompetitionName(
       this.match.league?.name ?? ""
     );
-    const round = this.formatOrdinalRound(this.match.league?.round || "");
+    const round = this.formatOrdinalRound(
+      this.match.league?.round || "",
+      this.match.league?.name || ""
+    );
 
     const title = `[PRÉ-JOGO] | ${competition} | ${homeName} X ${awayName} | ${round}`;
     const body = await formatPreMatchThread(this.match);
@@ -116,14 +119,29 @@ export class PreMatchScheduler extends BaseScheduler {
     return normalized.includes("SERIE A") ? "BRASILEIRÃO" : normalized;
   }
 
-  private formatOrdinalRound(round: string): string {
+  private formatOrdinalRound(round: string, competitionName: string): string {
     const rodadaMatch = round.match(
       /(Regular Season|Temporada Regular)\s*-\s*(\d+)/i
     );
     if (rodadaMatch) return `${rodadaMatch[2]}ª RODADA`;
 
-    const groupMatch = round.match(/Group Stage - (\w)/i);
-    if (groupMatch) return `GRUPO ${groupMatch[1]}`;
+    const groupMatch = round.match(/Group Stage - (\w+)/i);
+    if (groupMatch) {
+      // Convert group numbers to letters for Copa Libertadores
+      const isLibertadores = competitionName
+        .toLowerCase()
+        .includes("libertadores");
+      let groupIdentifier = groupMatch[1];
+
+      if (isLibertadores) {
+        const groupNumber = parseInt(groupIdentifier);
+        if (!isNaN(groupNumber) && groupNumber >= 1 && groupNumber <= 8) {
+          groupIdentifier = String.fromCharCode(64 + groupNumber); // 1->A, 2->B, etc.
+        }
+      }
+
+      return `GRUPO ${groupIdentifier}`;
+    }
 
     return round.toUpperCase();
   }

@@ -36,7 +36,10 @@ export class PostMatchScheduler extends BaseScheduler {
           this.match.league?.name || "COMPETIÇÃO"
         );
         const roundValue = this.match.league?.round || "Regular Season - 38";
-        const round = this.formatOrdinalRound(roundValue);
+        const round = this.formatOrdinalRound(
+          roundValue,
+          this.match.league?.name || "COMPETIÇÃO"
+        );
 
         // Determine which team is Internacional and use nicknames for opponents
         const isHomeInter = homeTeam.includes("Internacional");
@@ -458,7 +461,7 @@ export class PostMatchScheduler extends BaseScheduler {
 
       // Format the round - use the original match data for round info
       const roundValue = this.match.league?.round || "Regular Season - 38";
-      const round = this.formatOrdinalRound(roundValue);
+      const round = this.formatOrdinalRound(roundValue, leagueName);
 
       // Format the score line with extra info for AET or penalties
       let scoreLine = `${homeName} ${score.home} x ${score.away} ${awayName}`;
@@ -647,11 +650,26 @@ Vamo Inter!
   }
 
   // Helper to format round number
-  private formatOrdinalRound(round: string): string {
+  private formatOrdinalRound(round: string, leagueName: string): string {
     const match = round.match(/Regular Season\s*-\s*(\d+)/i);
     if (match) return `${match[1]}ª RODADA`;
+
     const group = round.match(/Group Stage\s*-\s*(\w+)/i);
-    if (group) return `GRUPO ${group[1]}`;
+    if (group) {
+      // Convert group numbers to letters for Copa Libertadores
+      const isLibertadores = leagueName.toLowerCase().includes("libertadores");
+      let groupIdentifier = group[1];
+
+      if (isLibertadores) {
+        const groupNumber = parseInt(groupIdentifier);
+        if (!isNaN(groupNumber) && groupNumber >= 1 && groupNumber <= 8) {
+          groupIdentifier = String.fromCharCode(64 + groupNumber); // 1->A, 2->B, etc.
+        }
+      }
+
+      return `GRUPO ${groupIdentifier}`;
+    }
+
     return round.toUpperCase();
   }
 

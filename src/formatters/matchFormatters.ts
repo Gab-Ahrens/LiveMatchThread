@@ -26,16 +26,50 @@ export function formatCompetition(name: string): string {
 }
 
 /**
+ * Converts group numbers to letters for Copa Libertadores
+ * Groups 1-8 become A-H
+ */
+function convertLibertadoresGroup(
+  competitionName: string,
+  groupIdentifier: string
+): string {
+  // Check if this is Copa Libertadores
+  const isLibertadores = competitionName.toLowerCase().includes("libertadores");
+
+  if (!isLibertadores) {
+    return groupIdentifier; // Return as-is for other competitions
+  }
+
+  // Convert numbers to letters for Libertadores
+  const groupNumber = parseInt(groupIdentifier);
+  if (isNaN(groupNumber) || groupNumber < 1 || groupNumber > 8) {
+    return groupIdentifier; // Return as-is if not a valid number
+  }
+
+  // Convert 1->A, 2->B, etc.
+  return String.fromCharCode(64 + groupNumber); // 65 is 'A', so 64 + 1 = 'A'
+}
+
+/**
  * Formats the round to an ordinal number (e.g., "1ª RODADA")
  */
-export function formatOrdinalRound(round: string): string {
+export function formatOrdinalRound(
+  round: string,
+  competitionName: string = ""
+): string {
   const rodadaMatch = round.match(
     /(Regular Season|Temporada Regular)\s*-\s*(\d+)/i
   );
   if (rodadaMatch) return `${rodadaMatch[2]}ª RODADA`;
 
-  const groupMatch = round.match(/Group Stage - (\w)/i);
-  if (groupMatch) return `GRUPO ${groupMatch[1]}`;
+  const groupMatch = round.match(/Group Stage - (\w+)/i);
+  if (groupMatch) {
+    const groupIdentifier = convertLibertadoresGroup(
+      competitionName,
+      groupMatch[1]
+    );
+    return `GRUPO ${groupIdentifier}`;
+  }
 
   return round.toUpperCase();
 }
@@ -43,10 +77,19 @@ export function formatOrdinalRound(round: string): string {
 /**
  * Formats round names for different competition stages
  */
-export function formatRound(round: string): string {
+export function formatRound(
+  round: string,
+  competitionName: string = ""
+): string {
   // Group Stage
-  const groupMatch = round.match(/Group Stage - (\w)/i);
-  if (groupMatch) return `GRUPO ${groupMatch[1]}`;
+  const groupMatch = round.match(/Group Stage - (\w+)/i);
+  if (groupMatch) {
+    const groupIdentifier = convertLibertadoresGroup(
+      competitionName,
+      groupMatch[1]
+    );
+    return `GRUPO ${groupIdentifier}`;
+  }
 
   // Regular Season - 2 → Rodada 2
   const rodadaMatch = round.match(
@@ -255,7 +298,7 @@ export async function formatMatchThread(
     ? formatLineups(lineups)
     : "Escalações indisponíveis no momento.";
   const threadBody = `
-## ${formatCompetition(league.name)} - ${formatRound(league.round)}
+## ${formatCompetition(league.name)} - ${formatRound(league.round, league.name)}
 
 **${teams.home.name}** vs **${teams.away.name}**
 
@@ -326,7 +369,7 @@ export async function formatPreMatchThread(match: any): Promise<string> {
   const city = venue?.city ?? "Cidade a definir";
 
   const threadBody = `
-## ${formatCompetition(league.name)} - ${formatRound(league.round)}
+## ${formatCompetition(league.name)} - ${formatRound(league.round, league.name)}
 
 **${homeTeamName}** vs **${awayTeamName}**
 
