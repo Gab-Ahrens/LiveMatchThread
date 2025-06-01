@@ -5,7 +5,7 @@ An automated Reddit bot that creates comprehensive match threads for SC Internac
 ## Features
 
 ### Automated Thread Scheduling
-- **Pre-Match Thread**: Posted 24 hours before kickoff for predictions and discussions
+- **Pre-Match Thread**:  Scheduled for 24 hours before kickoff (posts immediately if bot starts within 24 hours of match)
 - **Match Thread**: Posted 20 minutes before kickoff with lineups and live updates
 - **Post-Match Thread**: Posted automatically when match ends with final stats and analysis
 
